@@ -46,11 +46,11 @@ validateEnvVariables() {
 }
 
 get() {
-  curl -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s ${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1
+  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s ${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1
 }
 
 post() {
-  curl -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X POST -d "$2" ${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1
+  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X POST -d "$2" ${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1
 }
 
 findAndSourceEnv() {
