@@ -1,4 +1,6 @@
-# btp-chaincode
+# btp-chaincode-lifecycle
+
+Scripts to manage the chaincode lifecycle on the BTP platform
 
 ```
 Usage: ./chaincode.sh <command> [options]
