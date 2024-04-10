@@ -21,6 +21,8 @@ usage() {
   echo "  approve <peer>          : Approve the chaincode"
   echo "  commit <peer>           : Commit the chaincode"
   echo "  init <peer>             : Initialize the chaincode"
+  echo "  query <peer> <function_name> [args...]  : Query the chaincode example: chaincode.sh query functionName '[\"arg1\", \"arg2\"]'"
+  echo "  invoke <peer> <function_name> [args...] : Invoke a transaction on the chaincode example: chaincode.sh invoke functionName '[\"arg1\", \"arg2\"]'"
   echo "Options:"
   echo "  -h, --help              : Display this help message"
   # Add more options if needed
@@ -29,7 +31,7 @@ usage() {
 getPeerId() {
   peers=$(get /peers)
 
-  if [ -n "$1" ]; then
+  if [ -n "$1" ] && [ "$1" != "default" ]; then
     echo "$peers" | jq -r ".[] | select(.uniqueName == \"$1\") | .id"
   else
     echo "$peers" | jq -r ".[] | select(.default == true) | .id"
@@ -38,28 +40,28 @@ getPeerId() {
 
 queryPeers() {
   infoln "Querying peers..."
-  get /peers | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName)"'
+  get "/peers" | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName)"'
   successln "Done"
 }
 
 queryInstalledChaincode() {
   infoln "Querying installed chaincode of ${1-default peer}..."
   peer_id=$(getPeerId $1)
-  get /installed/$peer_id | jq -r '.[] | "Package ID: \(.package_id), Label: \(.label)"'
+  get "/installed/$peer_id" | jq -r '.[] | "Package ID: \(.package_id), Label: \(.label)"'
   successln "Done"
 }
 
 queryApprovedChaincode() {
   infoln "Querying approved chaincode definition on ${1-"default peer"}..."
   peer_id=$(getPeerId $1)
-  get /approved/$peer_id?chaincode=$CC_NAME
+  get "/approved/$peer_id?chaincode=$CC_NAME"
   successln "Done"
 }
 
 queryCommittedChaincode() {
   infoln "Querying committed chaincode definition on ${1-"default peer"}..."
   peer_id=$(getPeerId $1)
-  get /committed/$peer_id?chaincode=$CC_NAME
+  get "/committed/$peer_id?chaincode=$CC_NAME"
   successln "Done"
 }
 
@@ -247,7 +249,50 @@ initChaincode() {
 
   peer_id=$(getPeerId $1)
 
-  post /init/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"chaincodeSequence\": ${CC_INIT_ARGS:-[]}}"
+  post /init/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}}"
+
+  successln "done"
+}
+
+invokeChaincode() {
+  infoln "Invoking chaincode on ${1-"default peer"} for $2 with $3..."
+
+  peer_id=$(getPeerId $1)
+
+  post /invoke/$peer_id '{"chaincodeName": "'$CC_NAME'", "functionName": "'$2'", "functionArgs": '${3:-[]}'}'
+
+  successln "done"
+}
+
+queryChaincode() {
+  infoln "Querying chaincode on ${1-"default peer"} for $2 with $3..."
+
+  input=$3
+
+  if [[ -n $input && $input != \[* && $input != *\] ]]; then
+    function_args="&function_args[]=$input"
+  elif [[ -n $input && $input != '[]' ]]; then
+    delimiter="|"
+
+    # Remove brackets and quotes
+    input="${input//[\"/}"
+    input="${input//\"]/}"
+
+    # Replace commas between quotes with a different delimiter
+    input="${input//\",\"/$delimiter}"
+
+    # Replace delimiter with '&function_args[]='
+    input="${input//$delimiter/\&function_args[]=}"
+
+    # Add 'function_args[]=' to the beginning
+    function_args="&function_args[]=$input"
+  else
+    function_args=""
+  fi
+
+  peer_id=$(getPeerId $1)
+
+  get "/query/$peer_id?chaincode=$CC_NAME&function_name=${2}${function_args}"
 
   successln "done"
 }
@@ -299,6 +344,28 @@ main() {
   init)
     validateEnvVariables
     initChaincode $2
+    ;;
+  invoke)
+    validateEnvVariables
+    if [ $# -eq 3 ]; then
+      invokeChaincode "default" $2 $3
+    elif [ $# -eq 4 ]; then
+      invokeChaincode "default" $2 $3 $4
+    else
+      echo "Error: Incorrect number of arguments provided, at least function name and arguments must be provided"
+      return 1
+    fi
+    ;;
+  query)
+    validateEnvVariables
+    if [ $# -eq 3 ]; then
+      queryChaincode "default" $2 $3
+    elif [ $# -eq 4 ]; then
+      queryChaincode "default" $2 $3 $4
+    else
+      echo "Error: Incorrect number of arguments provided, at least function name and arguments must be provided"
+      return 1
+    fi
     ;;
   -h | --help | help)
     usage
