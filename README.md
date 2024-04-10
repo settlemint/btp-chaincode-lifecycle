@@ -15,6 +15,8 @@ Commands:
   approve <peer>          : Approve the chaincode
   commit <peer>           : Commit the chaincode
   init <peer>             : Initialize the chaincode
+  query <peer> <function_name> [args...]  : Query the chaincode example: chaincode.sh query functionName '["arg1", "arg2"]'
+  invoke <peer> <function_name> [args...] : Invoke a transaction on the chaincode example: chaincode.sh invoke functionName '["arg1", "arg2"]'
 Options:
   -h, --help              : Display this help message
 ```
