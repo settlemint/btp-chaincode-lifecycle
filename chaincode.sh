@@ -12,6 +12,8 @@ usage() {
   echo "Usage: $0 <command> [options]"
   echo "Commands:"
   echo "  peers                   : Query the peers on which we can install the chaincode"
+  echo "  orderers                : Query the orderers"
+  echo "  channels                : Query the channels"
   echo "  installed <peer>        : Query installed chaincodes"
   echo "  approved <peer>         : Query approved definition of chaincode"
   echo "  committed <peer>        : Query commit definition of chaincode"
@@ -21,8 +23,17 @@ usage() {
   echo "  approve <peer>          : Approve the chaincode"
   echo "  commit <peer>           : Commit the chaincode"
   echo "  init <peer>             : Initialize the chaincode"
-  echo "  query <peer> <function_name> [args...]  : Query the chaincode example: chaincode.sh query functionName '[\"arg1\", \"arg2\"]'"
-  echo "  invoke <peer> <function_name> [args...] : Invoke a transaction on the chaincode example: chaincode.sh invoke functionName '[\"arg1\", \"arg2\"]'"
+  echo "  query <peer> <function_name> [args...]  : Query the chaincode."
+  echo "    Example: chaincode.sh query functionName '[\"arg1\", \"arg2\"]'"
+  echo "  invoke <peer> <function_name> [args...] : Invoke a transaction on the chaincode."
+  echo "    Example: chaincode.sh invoke functionName '[\"arg1\", \"arg2\"]'"
+  echo "  create-channel <channel_name> [options] : Create a channel with the given name and options"
+  echo "    Options:"
+  echo "      --endorsementPolicy <MAJORITY|ALL> : Endorsement policy for the channel (default: MAJORITY)"
+  echo "      --batchTimeoutInSeconds <seconds>  : Batch timeout in seconds (default: 2)"
+  echo "      --maxMessageCount <count>          : Maximum message count (default: 500)"
+  echo "      --absoluteMaxMB <MB>                : Absolute maximum bytes (default: 10)"
+  echo "      --preferredMaxMB <MB>               : Preferred maximum bytes (default: 2)"
   echo "Options:"
   echo "  -h, --help              : Display this help message"
   # Add more options if needed
@@ -38,9 +49,31 @@ getPeerId() {
   fi
 }
 
+getOrdererId() {
+  orderers=$(get /orderers)
+
+  if [ -n "$1" ] && [ "$1" != "default" ]; then
+    echo "$orderers" | jq -r ".[] | select(.uniqueName == \"$1\") | .id"
+  else
+    echo "$orderers" | jq -r ".[] | select(.default == true) | .id"
+  fi
+}
+
 queryPeers() {
   infoln "Querying peers..."
-  get "/peers" | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName)"'
+  get "/peers" | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName), Default: \(.default)"'
+  successln "Done"
+}
+
+queryOrderers() {
+  infoln "Querying orderers..."
+  get "/orderers" | jq -r '.[] | "Orderer ID: \(.id), Name: \(.uniqueName), Default: \(.default)"'
+  successln "Done"
+}
+
+queryChannels() {
+  infoln "Querying channels..."
+  get "/channels" | jq -r '.[] | "Channel Name: \(.)"'
   successln "Done"
 }
 
@@ -75,7 +108,11 @@ checkCommitReadiness() {
     init_required="false"
   fi
 
-  get "/commit-readiness/${peer_id}?chaincode=${CC_NAME}&version=${CC_VERSION}&sequence=${CC_SEQUENCE}&init_required=${init_required}"
+  if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
+    post /commit-readiness/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})}"
+  else
+    get "/commit-readiness/${peer_id}?chaincode=${CC_NAME}&version=${CC_VERSION}&sequence=${CC_SEQUENCE}&init_required=${init_required}"
+  fi
 
   successln "Done"
 }
@@ -176,7 +213,13 @@ approveChaincode() {
     init_required="false"
   fi
 
-  post /approve/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required}"
+  if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
+    collections_config=", \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})"
+  else
+    collections_config=""
+  fi
+
+  post /approve/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}}"
   successln "Done"
 }
 
@@ -207,7 +250,13 @@ commitChaincode() {
     init_required="false"
   fi
 
-  post /commit/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required}"
+  if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
+    collections_config=", \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})"
+  else
+    collections_config=""
+  fi
+
+  post /commit/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}}"
 
   infoln "Request to commit chaincode sent, will start polling to check if chaincode is committed..."
 
@@ -297,6 +346,79 @@ queryChaincode() {
   successln "done"
 }
 
+createChannel() {
+  # Default values
+  endorsement_policy=MAJORITY
+  batch_timeout_seconds=2 # seconds
+  max_message_count=500
+  absolute_max_mb=10 # MB
+  preferred_max_mb=2 # MB
+
+  # Parse command line arguments
+  channel_name="$1"
+  shift
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+    --endorsementPolicy)
+      endorsement_policy="$2"
+      shift 2
+      ;;
+    --batchTimeoutInSeconds)
+      batch_timeout_seconds="$2"
+      shift 2
+      ;;
+    --maxMessageCount)
+      max_message_count="$2"
+      shift 2
+      ;;
+    --absoluteMaxMB)
+      absolute_max_mb="$2"
+      shift 2
+      ;;
+    --preferredMaxMB)
+      preferred_max_mb="$2"
+      shift 2
+      ;;
+    *)
+      errorln "Unknown option: $1"
+      return 1
+      ;;
+    esac
+  done
+
+  # Validation
+  if [ -z "$channel_name" ]; then
+    fatalln "Channel name is required."
+  fi
+
+  if [ "$endorsement_policy" != "MAJORITY" ] && [ "$endorsement_policy" != "ALL" ]; then
+    fatalln "Endorsement policy must be either 'MAJORITY' or 'ALL', found '${endorsement_policy}'."
+  fi
+
+  if ! [[ "$batch_timeout_seconds" =~ ^[0-9]+$ ]]; then
+    fatalln "Batch timeout must be a number, found '${batch_timeout_seconds}'."
+  fi
+
+  if ! [[ "$max_message_count" =~ ^[0-9]+$ ]]; then
+    fatalln "Max message count must be a number, found '${max_message_count}'."
+  fi
+
+  if ! [[ "$absolute_max_mb" =~ ^[0-9]+$ ]]; then
+    fatalln "Absolute max bytes must be a number, found '${absolute_max_mb}'."
+  fi
+
+  if ! [[ "$preferred_max_mb" =~ ^[0-9]+$ ]]; then
+    fatalln "Preferred max bytes must be a number, found '${preferred_max_mb}'."
+  fi
+
+  infoln "Creating channel ${channel_name} with configuration [endorsement_policy=${endorsement_policy}, batch_timeout_seconds=${batch_timeout_seconds}, max_message_count=${max_message_count}, absolute_max_mb=${absolute_max_mb}, preferred_max_mb=${preferred_max_mb}]..."
+
+  post /channels '{"name": "'$channel_name'", "endorsementPolicy": "'$endorsement_policy'", "batchTimeoutSeconds": '$batch_timeout_seconds', "maxMessageCount": '$max_message_count', "absoluteMaxMB": '$absolute_max_mb', "preferredMaxMB": '$preferred_max_mb'}'
+
+  successln "done"
+}
+
 # Main function to parse arguments and execute commands
 main() {
   if [[ $# -eq 0 ]]; then
@@ -308,6 +430,14 @@ main() {
   peers)
     validateEnvVariables
     queryPeers
+    ;;
+  orderers)
+    validateEnvVariables
+    queryOrderers
+    ;;
+  channels)
+    validateEnvVariables
+    queryChannels
     ;;
   installed)
     validateEnvVariables
@@ -366,6 +496,10 @@ main() {
       echo "Error: Incorrect number of arguments provided, at least function name and arguments must be provided"
       return 1
     fi
+    ;;
+  create-channel)
+    validateEnvVariables
+    createChannel "${@:2}"
     ;;
   -h | --help | help)
     usage

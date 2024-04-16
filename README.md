@@ -6,6 +6,8 @@ Scripts to manage the chaincode lifecycle on the BTP platform
 Usage: ./chaincode.sh <command> [options]
 Commands:
   peers                   : Query the peers on which we can install the chaincode
+  orderers                : Query the orderers
+  channels                : Query the channels
   installed <peer>        : Query installed chaincodes
   approved <peer>         : Query approved definition of chaincode
   committed <peer>        : Query commit definition of chaincode
@@ -15,8 +17,17 @@ Commands:
   approve <peer>          : Approve the chaincode
   commit <peer>           : Commit the chaincode
   init <peer>             : Initialize the chaincode
-  query <peer> <function_name> [args...]  : Query the chaincode example: chaincode.sh query functionName '["arg1", "arg2"]'
-  invoke <peer> <function_name> [args...] : Invoke a transaction on the chaincode example: chaincode.sh invoke functionName '["arg1", "arg2"]'
+  query <peer> <function_name> [args...]  : Query the chaincode.
+    Example: chaincode.sh query functionName '["arg1", "arg2"]'
+  invoke <peer> <function_name> [args...] : Invoke a transaction on the chaincode.
+    Example: chaincode.sh invoke functionName '["arg1", "arg2"]'
+  create-channel <channel_name> [options] : Create a channel with the given name and options
+    Options:
+      --endorsementPolicy <MAJORITY|ALL> : Endorsement policy for the channel (default: MAJORITY)
+      --batchTimeoutInSeconds <seconds>  : Batch timeout in seconds (default: 2)
+      --maxMessageCount <count>          : Maximum message count (default: 500)
+      --absoluteMaxMB <MB>                : Absolute maximum bytes (default: 10)
+      --preferredMaxMB <MB>               : Preferred maximum bytes (default: 2)
 Options:
   -h, --help              : Display this help message
 ```
