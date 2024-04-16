@@ -23,17 +23,21 @@ usage() {
   echo "  approve <peer>          : Approve the chaincode"
   echo "  commit <peer>           : Commit the chaincode"
   echo "  init <peer>             : Initialize the chaincode"
-  echo "  query <peer> <function_name> [args...]  : Query the chaincode."
+  echo "  query <peer> <function_name> [args...]         : Query the chaincode."
   echo "    Example: chaincode.sh query functionName '[\"arg1\", \"arg2\"]'"
-  echo "  invoke <peer> <function_name> [args...] : Invoke a transaction on the chaincode."
+  echo "  invoke <peer> <function_name> [args...]        : Invoke a transaction on the chaincode."
   echo "    Example: chaincode.sh invoke functionName '[\"arg1\", \"arg2\"]'"
-  echo "  create-channel <channel_name> [options] : Create a channel with the given name and options"
+  echo "  create-channel <channel_name> [options]        : Create a channel with the given name and options"
   echo "    Options:"
-  echo "      --endorsementPolicy <MAJORITY|ALL> : Endorsement policy for the channel (default: MAJORITY)"
-  echo "      --batchTimeoutInSeconds <seconds>  : Batch timeout in seconds (default: 2)"
-  echo "      --maxMessageCount <count>          : Maximum message count (default: 500)"
-  echo "      --absoluteMaxMB <MB>                : Absolute maximum bytes (default: 10)"
-  echo "      --preferredMaxMB <MB>               : Preferred maximum bytes (default: 2)"
+  echo "      --endorsementPolicy <MAJORITY|ALL>         : Endorsement policy for the channel (default: MAJORITY)"
+  echo "      --batchTimeoutInSeconds <seconds>          : Batch timeout in seconds (default: 2)"
+  echo "      --maxMessageCount <count>                  : Maximum message count (default: 500)"
+  echo "      --absoluteMaxMB <MB>                       : Absolute maximum bytes (default: 10)"
+  echo "      --preferredMaxMB <MB>                      : Preferred maximum bytes (default: 2)"
+  echo "  orderer-join-channel <orderer> <channel_name>  : Orderer joins a channel."
+  echo "  orderer-leave-channel <orderer> <channel_name> : Orderer leaves a channel."
+  echo "  peer-join-channel <peer> <channel_name>        : Peer joins a channel."
+  echo "  peer-leave-channel <peer> <channel_name>       : Peer leaves a channel."
   echo "Options:"
   echo "  -h, --help              : Display this help message"
   # Add more options if needed
@@ -419,6 +423,34 @@ createChannel() {
   successln "done"
 }
 
+ordererJoinChannel() {
+  infoln "Orderer ${1} joining channel ${2}..."
+  orderer_id=$(getOrdererId $1)
+  post /channels/${2}/nodes '{"nodeId": "'$orderer_id'"}'
+  successln "done"
+}
+
+peerJoinChannel() {
+  infoln "Peer ${1} joining channel ${2}..."
+  peer_id=$(getPeerId $1)
+  post /channels/${2}/nodes '{"nodeId": "'$peer_id'"}'
+  successln "done"
+}
+
+ordererLeaveChannel() {
+  infoln "Orderer ${1} leaving channel ${2}..."
+  orderer_id=$(getOrdererId $1)
+  delete /channels/${2}/nodes/${orderer_id}
+  successln "done"
+}
+
+peerLeaveChannel() {
+  infoln "Peer ${1} leaving channel ${2}..."
+  peer_id=$(getPeerId $1)
+  delete /channels/${2}/nodes/${peer_id}
+  successln "done"
+}
+
 # Main function to parse arguments and execute commands
 main() {
   if [[ $# -eq 0 ]]; then
@@ -500,6 +532,22 @@ main() {
   create-channel)
     validateEnvVariables
     createChannel "${@:2}"
+    ;;
+  orderer-join-channel)
+    validateEnvVariables
+    ordererJoinChannel $2 $3
+    ;;
+  peer-join-channel)
+    validateEnvVariables
+    peerJoinChannel $2 $3
+    ;;
+  orderer-leave-channel)
+    validateEnvVariables
+    ordererLeaveChannel $2 $3
+    ;;
+  peer-leave-channel)
+    validateEnvVariables
+    peerLeaveChannel $2 $3
     ;;
   -h | --help | help)
     usage

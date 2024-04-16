@@ -49,6 +49,10 @@ get() {
   curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s "${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1"
 }
 
+delete() {
+  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -X DELETE "${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1"
+}
+
 post() {
   curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X POST -d "$2" "${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1"
 }
