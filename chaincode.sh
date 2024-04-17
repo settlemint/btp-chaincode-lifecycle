@@ -13,6 +13,7 @@ usage() {
   echo "Commands:"
   echo "  peers                   : Query the peers on which we can install the chaincode"
   echo "  orderers                : Query the orderers"
+  echo "  nodes                   : Query all the nodes"
   echo "  channels                : Query the channels"
   echo "  installed <peer>        : Query installed chaincodes"
   echo "  approved <peer>         : Query approved definition of chaincode"
@@ -43,6 +44,16 @@ usage() {
   # Add more options if needed
 }
 
+getNodeId() {
+  nodes=$(get /nodes)
+
+  if [ -n "$1" ] && [ "$1" != "default" ]; then
+    echo "$nodes" | jq -r ".[] | select(.uniqueName == \"$1\") | .id"
+  else
+    echo "$nodes" | jq -r ".[] | select(.default == true and .type == \"${2-"orderer"}\") | .id"
+  fi
+}
+
 getPeerId() {
   peers=$(get /peers)
 
@@ -63,6 +74,12 @@ getOrdererId() {
   fi
 }
 
+queryNodes() {
+  infoln "Querying nodes..."
+  get "/nodes" | jq -r '.[] | "Node ID: \(.id), Name: \(.uniqueName), Type: \(.type), Default: \(.default)"'
+  successln "Done"
+}
+
 queryPeers() {
   infoln "Querying peers..."
   get "/peers" | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName), Default: \(.default)"'
@@ -76,8 +93,9 @@ queryOrderers() {
 }
 
 queryChannels() {
-  infoln "Querying channels..."
-  get "/channels" | jq -r '.[] | "Channel Name: \(.)"'
+  infoln "Querying channels for ${1-"default orderer"}..."
+  node_id=$(getNodeId $1 "orderer")
+  get "/channels?node=$node_id" | jq -r '.[] | "Channel Name: \(.)"'
   successln "Done"
 }
 

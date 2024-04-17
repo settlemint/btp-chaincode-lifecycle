@@ -7,6 +7,7 @@ Usage: ./chaincode.sh <command> [options]
 Commands:
   peers                   : Query the peers on which we can install the chaincode
   orderers                : Query the orderers
+  nodes                   : Query all the nodes
   channels                : Query the channels
   installed <peer>        : Query installed chaincodes
   approved <peer>         : Query approved definition of chaincode
@@ -33,5 +34,5 @@ Commands:
   peer-join-channel <peer> <channel_name>        : Peer joins a channel.
   peer-leave-channel <peer> <channel_name>       : Peer leaves a channel.
 Options:
-  -h, --help 
+  -h, --help              : Display this help message
 ```
