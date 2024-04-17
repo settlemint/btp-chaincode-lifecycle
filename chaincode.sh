@@ -76,19 +76,19 @@ getOrdererId() {
 
 queryNodes() {
   infoln "Querying nodes..."
-  get "/nodes" | jq -r '.[] | "Node ID: \(.id), Name: \(.uniqueName), Type: \(.type), Default: \(.default)"'
+  get "/nodes" | jq -r '.[] | "Node ID: \(.id), Name: \(.uniqueName), Type: \(.type), MSP Id: \(.mspId), Default: \(.default)"'
   successln "Done"
 }
 
 queryPeers() {
   infoln "Querying peers..."
-  get "/peers" | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName), Default: \(.default)"'
+  get "/peers" | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId), Default: \(.default)"'
   successln "Done"
 }
 
 queryOrderers() {
   infoln "Querying orderers..."
-  get "/orderers" | jq -r '.[] | "Orderer ID: \(.id), Name: \(.uniqueName), Default: \(.default)"'
+  get "/orderers" | jq -r '.[] | "Orderer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId), Default: \(.default)"'
   successln "Done"
 }
 
@@ -484,6 +484,10 @@ main() {
   orderers)
     validateEnvVariables
     queryOrderers
+    ;;
+  nodes)
+    validateEnvVariables
+    queryNodes
     ;;
   channels)
     validateEnvVariables
