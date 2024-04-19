@@ -102,26 +102,36 @@ queryChannels() {
 queryInstalledChaincode() {
   infoln "Querying installed chaincode of ${1-default peer}..."
   peer_id=$(getPeerId $1)
-  get "/installed/$peer_id" | jq -r '.[] | "Package ID: \(.package_id), Label: \(.label)"'
+  get "/peers/${peer_id}/chaincodes/installed" | jq -r '.[] | "Package ID: \(.package_id), Label: \(.label)"'
   successln "Done"
 }
 
 queryApprovedChaincode() {
-  infoln "Querying approved chaincode definition on ${1-"default peer"}..."
+  infoln "Querying approved chaincode definition on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
   peer_id=$(getPeerId $1)
-  get "/approved/$peer_id?chaincode=$CC_NAME"
+  if [ -n "$CC_CHANNEL" ]; then
+    channel_name="&channel=$CC_CHANNEL"
+  else
+    channel_name=""
+  fi
+  get "/peers/${peer_id}/chaincodes/approved?chaincode=${CC_NAME}${channel_name}"
   successln "Done"
 }
 
 queryCommittedChaincode() {
-  infoln "Querying committed chaincode definition on ${1-"default peer"}..."
+  infoln "Querying committed chaincode definition on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
   peer_id=$(getPeerId $1)
-  get "/committed/$peer_id?chaincode=$CC_NAME"
+  if [ -n "$CC_CHANNEL" ]; then
+    channel_name="&channel=$CC_CHANNEL"
+  else
+    channel_name=""
+  fi
+  get "/peers/${peer_id}/chaincodes/committed?chaincode=$CC_NAME${CC_NAME}${channel_name}"
   successln "Done"
 }
 
 checkCommitReadiness() {
-  infoln "Checking commit readiness on ${1-"default peer"}..."
+  infoln "Checking commit readiness on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
   peer_id=$(getPeerId $1)
 
   if [ -n "$CC_INIT_FCN" ]; then
@@ -131,9 +141,19 @@ checkCommitReadiness() {
   fi
 
   if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
-    post /commit-readiness/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})}"
+    if [ -n "$CC_CHANNEL" ]; then
+      channel_name=", \"channelName\": \"$CC_CHANNEL\""
+    else
+      channel_name=""
+    fi
+    post /peers/${peer_id}/chaincodes/commit-readiness "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})${channel_name}}"
   else
-    get "/commit-readiness/${peer_id}?chaincode=${CC_NAME}&version=${CC_VERSION}&sequence=${CC_SEQUENCE}&init_required=${init_required}"
+    if [ -n "$CC_CHANNEL" ]; then
+      channel_name="&channel=$CC_CHANNEL"
+    else
+      channel_name=""
+    fi
+    get "/peers/${peer_id}/chaincodes/commit-readiness?chaincode=${CC_NAME}&version=${CC_VERSION}&sequence=${CC_SEQUENCE}&init_required=${init_required}${channel_name}"
   fi
 
   successln "Done"
@@ -167,7 +187,7 @@ compileAndPackageChaincode() {
 }
 
 isChaincodeInstalled() {
-  result=$(get /installed/$1 | jq -r ".[] | select(.package_id | contains(\"$2\"))")
+  result=$(get /peers/$1/chaincodes/installed | jq -r ".[] | select(.package_id | contains(\"$2\"))")
 
   # Check if result is empty
   if [ -z "$result" ]; then
@@ -186,7 +206,7 @@ installChaincode() {
     exit 0
   fi
 
-  result=$(curl -A "Chaincode lifecycle" -F "file=@./${CC_NAME}.tar.gz" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -w "%{http_code}" -o /dev/null ${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}/install/${peer_id})
+  result=$(curl -A "Chaincode lifecycle" -F "file=@./${CC_NAME}.tar.gz" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -w "%{http_code}" -o /dev/null ${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}/peers/${peer_id}/chaincodes/install)
 
   # Check if curl command returned status code 500
   if [ "$result" -eq 500 ]; then
@@ -226,7 +246,7 @@ installChaincode() {
 }
 
 approveChaincode() {
-  infoln "Approving chaincode on ${1-"default peer"}..."
+  infoln "Approving chaincode on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
   peer_id=$(getPeerId $1)
 
   if [ -n "$CC_INIT_FCN" ]; then
@@ -241,12 +261,24 @@ approveChaincode() {
     collections_config=""
   fi
 
-  post /approve/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}}"
+  if [ -n "$CC_CHANNEL" ]; then
+    channel_name=", \"channelName\": \"$CC_CHANNEL\""
+  else
+    channel_name=""
+  fi
+
+  post /peers/${peer_id}/chaincodes/approve "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${channel_name}}"
   successln "Done"
 }
 
 isChaincodeCommitted() {
-  response=$(get /committed/$1?chaincode=$CC_NAME)
+  if [ -n "$CC_CHANNEL" ]; then
+    channel_name="&channel=$CC_CHANNEL"
+  else
+    channel_name=""
+  fi
+
+  response=$(get /peers/$1/chaincodes/committed?chaincode=${CC_NAME}${channel_name})
 
   result=$(echo "$response" | jq ".sequence == $CC_SEQUENCE and .version == \"$CC_VERSION\"")
 
@@ -258,8 +290,8 @@ isChaincodeCommitted() {
 }
 
 commitChaincode() {
-  infoln "Committing chaincode on ${1-"default peer"}..."
-  peer_id=$(getPeerId $1)
+  infoln "Committing chaincode on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
+  peer_id=$(getPeerId $1 $2)
 
   if isChaincodeCommitted $peer_id; then
     successln "Chaincode already committed"
@@ -278,7 +310,13 @@ commitChaincode() {
     collections_config=""
   fi
 
-  post /commit/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}}"
+  if [ -n "$CC_CHANNEL" ]; then
+    channel_name=", \"channelName\": \"$CC_CHANNEL\""
+  else
+    channel_name=""
+  fi
+
+  post /peers/${peer_id}/chaincodes/commit "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${channel_name}}"
 
   infoln "Request to commit chaincode sent, will start polling to check if chaincode is committed..."
 
@@ -312,7 +350,7 @@ commitChaincode() {
 }
 
 initChaincode() {
-  infoln "Initializing chaincode on ${1-"default peer"}..."
+  infoln "Initializing chaincode on ${1-"default peer"} on channel ${CC_CHANNEL-"default channel"}..."
 
   if [ -z "$CC_INIT_FCN" ]; then
     warnln "No CC_INIT_FCN function specified, skipping chaincode initialization."
@@ -320,23 +358,35 @@ initChaincode() {
 
   peer_id=$(getPeerId $1)
 
-  post /init/$peer_id "{\"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}}"
+  if [ -n "$CC_CHANNEL" ]; then
+    channel_name=", \"channelName\": \"$CC_CHANNEL\""
+  else
+    channel_name=""
+  fi
+
+  post /peers/${peer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
 
   successln "done"
 }
 
 invokeChaincode() {
-  infoln "Invoking chaincode on ${1-"default peer"} for $2 with $3..."
+  infoln "Invoking chaincode on ${1-"default peer"} for $2 with $3 on channel ${CC_CHANNEL-"default channel"}..."
 
   peer_id=$(getPeerId $1)
 
-  post /invoke/$peer_id '{"chaincodeName": "'$CC_NAME'", "functionName": "'$2'", "functionArgs": '${3:-[]}'}'
+  if [ -n "$CC_CHANNEL" ]; then
+    channel_name=", \"channelName\": \"$CC_CHANNEL\""
+  else
+    channel_name=""
+  fi
+
+  post /peers/${peer_id}/chaincodes/invoke '{"chaincodeName": "'$CC_NAME'", "functionName": "'$2'", "functionArgs": '${3:-[]}''${channel_name}'}'
 
   successln "done"
 }
 
 queryChaincode() {
-  infoln "Querying chaincode on ${1-"default peer"} for $2 with $3..."
+  infoln "Querying chaincode on ${1-"default peer"} for $2 with $3 on channel ${CC_CHANNEL-"default channel"}..."
 
   input=$3
 
@@ -363,7 +413,13 @@ queryChaincode() {
 
   peer_id=$(getPeerId $1)
 
-  get "/query/$peer_id?chaincode=$CC_NAME&function_name=${2}${function_args}"
+  if [ -n "$CC_CHANNEL" ]; then
+    channel_name="&channel=$CC_CHANNEL"
+  else
+    channel_name=""
+  fi
+
+  get "/peers/${peer_id}/chaincodes/query?chaincode=$CC_NAME&function_name=${2}${function_args}${channel_name}"
 
   successln "done"
 }
