@@ -544,7 +544,7 @@ main() {
     ;;
   channels)
     validateEnvVariables
-    queryChannels
+    queryChannels $2
     ;;
   installed)
     validateEnvVariables
