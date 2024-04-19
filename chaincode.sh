@@ -126,7 +126,7 @@ queryCommittedChaincode() {
   else
     channel_name=""
   fi
-  get "/peers/${peer_id}/chaincodes/committed?chaincode=$CC_NAME${CC_NAME}${channel_name}"
+  get "/peers/${peer_id}/chaincodes/committed?chaincode=${CC_NAME}${channel_name}"
   successln "Done"
 }
 
@@ -359,12 +359,10 @@ initChaincode() {
   peer_id=$(getPeerId $1)
 
   if [ -n "$CC_CHANNEL" ]; then
-    channel_name=", \"channelName\": \"$CC_CHANNEL\""
+    post /peers/${peer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"channelName\": \"$CC_CHANNEL\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
   else
-    channel_name=""
+    post /peers/${peer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
   fi
-
-  post /peers/${peer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
 
   successln "done"
 }
@@ -376,11 +374,10 @@ invokeChaincode() {
 
   if [ -n "$CC_CHANNEL" ]; then
     channel_name=", \"channelName\": \"$CC_CHANNEL\""
+    post /peers/${peer_id}/chaincodes/invoke '{"chaincodeName": "'$CC_NAME'", "channelName": "'$CC_CHANNEL'", "functionName": "'$2'", "functionArgs": '${3:-[]}'}'
   else
-    channel_name=""
+    post /peers/${peer_id}/chaincodes/invoke '{"chaincodeName": "'$CC_NAME'", "functionName": "'$2'", "functionArgs": '${3:-[]}'}'
   fi
-
-  post /peers/${peer_id}/chaincodes/invoke '{"chaincodeName": "'$CC_NAME'", "functionName": "'$2'", "functionArgs": '${3:-[]}''${channel_name}'}'
 
   successln "done"
 }
@@ -587,23 +584,27 @@ main() {
     ;;
   invoke)
     validateEnvVariables
-    if [ $# -eq 3 ]; then
+    if [ $# -eq 2 ]; then
+      invokeChaincode "default" $2
+    elif [ $# -eq 3 ]; then
       invokeChaincode "default" $2 $3
     elif [ $# -eq 4 ]; then
-      invokeChaincode "default" $2 $3 $4
+      invokeChaincode $2 $3 $4
     else
-      echo "Error: Incorrect number of arguments provided, at least function name and arguments must be provided"
+      echo "Error: Incorrect number of arguments provided, at least function name must be provided"
       return 1
     fi
     ;;
   query)
     validateEnvVariables
-    if [ $# -eq 3 ]; then
+    if [ $# -eq 2 ]; then
+      queryChaincode "default" $2
+    elif [ $# -eq 3 ]; then
       queryChaincode "default" $2 $3
     elif [ $# -eq 4 ]; then
-      queryChaincode "default" $2 $3 $4
+      queryChaincode $2 $3 $4
     else
-      echo "Error: Incorrect number of arguments provided, at least function name and arguments must be provided"
+      echo "Error: Incorrect number of arguments provided, at least function name must be provided"
       return 1
     fi
     ;;
