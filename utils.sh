@@ -17,6 +17,8 @@ validateEnvVariables() {
   println "- CC_VERSION: ${C_GREEN}${CC_VERSION}${C_RESET}"
   println "- CC_SEQUENCE: ${C_GREEN}${CC_SEQUENCE}${C_RESET}"
   println "- CC_INIT_FCN: ${C_GREEN}${CC_INIT_FCN}${C_RESET}"
+  println "- CC_CHANNEL: ${C_GREEN}${CC_CHANNEL}${C_RESET}"
+  println "- CC_COLLECTIONS_CONFIG_PATH: ${C_GREEN}${CC_COLLECTIONS_CONFIG_PATH}${C_RESET}"
   println ""
 
   if [ -z "$BTP_CLUSTER_MANAGER_URL" ]; then
