@@ -19,9 +19,9 @@ Commands:
   commit <peer>           : Commit the chaincode
   init <peer>             : Initialize the chaincode
   query <peer> <function_name> [args...]         : Query the chaincode.
-    Example: chaincode.sh query functionName '["arg1", "arg2"]'
+    Example: chaincode.sh query functionName '["arg1","arg2"]'
   invoke <peer> <function_name> [args...]        : Invoke a transaction on the chaincode.
-    Example: chaincode.sh invoke functionName '["arg1", "arg2"]'
+    Example: chaincode.sh invoke functionName '["arg1","arg2"]'
   create-channel <channel_name> [options]        : Create a channel with the given name and options
     Options:
       --endorsementPolicy <MAJORITY|ALL>         : Endorsement policy for the channel (default: MAJORITY)
@@ -36,6 +36,7 @@ Commands:
 Options:
   -h, --help              : Display this help message
 ```
+
 ## Prerequisites
 
 You will need following environment variables

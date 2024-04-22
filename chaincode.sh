@@ -392,6 +392,9 @@ queryChaincode() {
   elif [[ -n $input && $input != '[]' ]]; then
     delimiter="|"
 
+    # Remove spaces
+    input="${input// /}"
+
     # Remove brackets and quotes
     input="${input//[\"/}"
     input="${input//\"]/}"
@@ -544,23 +547,23 @@ main() {
     ;;
   channels)
     validateEnvVariables
-    queryChannels $2
+    queryChannels "$2"
     ;;
   installed)
     validateEnvVariables
-    queryInstalledChaincode $2
+    queryInstalledChaincode "$2"
     ;;
   approved)
     validateEnvVariables
-    queryApprovedChaincode $2
+    queryApprovedChaincode "$2"
     ;;
   committed)
     validateEnvVariables
-    queryCommittedChaincode $2
+    queryCommittedChaincode "$2"
     ;;
   commit-readiness)
     validateEnvVariables
-    checkCommitReadiness $2
+    checkCommitReadiness "$2"
     ;;
   package)
     validateEnvVariables
@@ -568,28 +571,28 @@ main() {
     ;;
   install)
     validateEnvVariables
-    installChaincode $2
+    installChaincode "$2"
     ;;
   approve)
     validateEnvVariables
-    approveChaincode $2
+    approveChaincode "$2"
     ;;
   commit)
     validateEnvVariables
-    commitChaincode $2
+    commitChaincode "$2"
     ;;
   init)
     validateEnvVariables
-    initChaincode $2
+    initChaincode "$2"
     ;;
   invoke)
     validateEnvVariables
     if [ $# -eq 2 ]; then
       invokeChaincode "default" $2
     elif [ $# -eq 3 ]; then
-      invokeChaincode "default" $2 $3
+      invokeChaincode "default" $2 "$3"
     elif [ $# -eq 4 ]; then
-      invokeChaincode $2 $3 $4
+      invokeChaincode "$2" $3 "$4"
     else
       echo "Error: Incorrect number of arguments provided, at least function name must be provided"
       return 1
@@ -600,9 +603,9 @@ main() {
     if [ $# -eq 2 ]; then
       queryChaincode "default" $2
     elif [ $# -eq 3 ]; then
-      queryChaincode "default" $2 $3
+      queryChaincode "default" $2 "$3"
     elif [ $# -eq 4 ]; then
-      queryChaincode $2 $3 $4
+      queryChaincode "$2" $3 "$4"
     else
       echo "Error: Incorrect number of arguments provided, at least function name must be provided"
       return 1
@@ -614,19 +617,19 @@ main() {
     ;;
   orderer-join-channel)
     validateEnvVariables
-    ordererJoinChannel $2 $3
+    ordererJoinChannel "$2" "$3"
     ;;
   peer-join-channel)
     validateEnvVariables
-    peerJoinChannel $2 $3
+    peerJoinChannel "$2" "$3"
     ;;
   orderer-leave-channel)
     validateEnvVariables
-    ordererLeaveChannel $2 $3
+    ordererLeaveChannel "$2" "$3"
     ;;
   peer-leave-channel)
     validateEnvVariables
-    peerLeaveChannel $2 $3
+    peerLeaveChannel "$2" "$3"
     ;;
   -h | --help | help)
     usage
