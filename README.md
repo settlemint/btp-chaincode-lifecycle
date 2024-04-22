@@ -18,10 +18,17 @@ Commands:
   approve <peer>          : Approve the chaincode
   commit <peer>           : Commit the chaincode
   init <peer>             : Initialize the chaincode
-  query <peer> <function_name> [args...]         : Query the chaincode.
-    Example: chaincode.sh query functionName '["arg1","arg2"]'
-  invoke <peer> <function_name> [args...]        : Invoke a transaction on the chaincode.
-    Example: chaincode.sh invoke functionName '["arg1","arg2"]'
+  query <peer> <function_name> [options]         : Query the chaincode.
+    Options:
+      --arguments '["arg1", "arg2"]'             : The regular arguments to pass to the function.
+      --channel <channel_name>                   : Optionally override the channel name.
+    Example: chaincode.sh query functionName --arguments '["arg1", "arg2"]'
+  invoke <peer> <function_name> [options]        : Invoke a transaction on the chaincode.
+    Options:
+      --arguments '["arg1", "arg2"]'             : The regular arguments to pass to the function.
+      --transient '{"key": "value"}'             : The transient data to pass the to the function.
+      --channel <channel_name>                   : Optionally override the channel name.
+    Example: chaincode.sh invoke functionName '["arg1", "arg2"]'
   create-channel <channel_name> [options]        : Create a channel with the given name and options
     Options:
       --endorsementPolicy <MAJORITY|ALL>         : Endorsement policy for the channel (default: MAJORITY)
@@ -42,18 +49,18 @@ Options:
 You will need following environment variables
 
 ```bash
-export CC_RUNTIME_LANGUAGE=node
-export CC_SRC_PATH=./dist
-export CC_NAME=chaincodeName
-export CC_VERSION=1.0
-export CC_SEQUENCE=1
-export CC_INIT_FCN=InitLedger
+export CC_RUNTIME_LANGUAGE=node # the runtime, right now only node is supported
+export CC_SRC_PATH=./dist # the path where the builded chaincode is located, this is the path that will be packeged
+export CC_NAME=chaincodeName # the name of the chaincode
+export CC_VERSION=1.0 # the version of the chaincode
+export CC_SEQUENCE=1 # the sequence number of the chaincode
 ```
 
 Optionally, you can set the following environment variables
 
 ```bash
-export CC_INIT_ARGS="[]"
-export CC_COLLECTIONS_CONFIG_PATH=./collections_config.json
-export CC_CHANNEL="mychannel" # Default would be default-channel
+export CC_INIT_FCN=InitLedger # optional name of initialization function, if not set means no initialization is needed
+export CC_INIT_ARGS="[]" # optional arguments for the initialization function
+export CC_COLLECTIONS_CONFIG_PATH=./collections_config.json # optional path of the collections config, can be used to configure PDC
+export CC_CHANNEL="mychannel" # optional override the channel to work on, by default this will be "default-channel"
 ```

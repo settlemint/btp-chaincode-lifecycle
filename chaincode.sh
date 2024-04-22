@@ -24,9 +24,16 @@ usage() {
   echo "  approve <peer>          : Approve the chaincode"
   echo "  commit <peer>           : Commit the chaincode"
   echo "  init <peer>             : Initialize the chaincode"
-  echo "  query <peer> <function_name> [args...]         : Query the chaincode."
-  echo "    Example: chaincode.sh query functionName '[\"arg1\", \"arg2\"]'"
-  echo "  invoke <peer> <function_name> [args...]        : Invoke a transaction on the chaincode."
+  echo "  query <peer> <function_name> [options]         : Query the chaincode."
+  echo "    Options:"
+  echo "      --arguments '[\"arg1\", \"arg2\"]'             : The regular arguments to pass to the function." # extra spaces for escaped quotes
+  echo "      --channel <channel_name>                   : Optionally override the channel name."
+  echo "    Example: chaincode.sh query functionName --arguments '[\"arg1\", \"arg2\"]'"
+  echo "  invoke <peer> <function_name> [options]        : Invoke a transaction on the chaincode."
+  echo "    Options:"
+  echo "      --arguments '[\"arg1\", \"arg2\"]'             : The regular arguments to pass to the function."  # extra spaces for escaped quotes
+  echo "      --transient '{\"key\": \"value\"}'             : The transient data to pass the to the function." # extra spaces for escaped quotes
+  echo "      --channel <channel_name>                   : Optionally override the channel name."
   echo "    Example: chaincode.sh invoke functionName '[\"arg1\", \"arg2\"]'"
   echo "  create-channel <channel_name> [options]        : Create a channel with the given name and options"
   echo "    Options:"
@@ -368,58 +375,147 @@ initChaincode() {
 }
 
 invokeChaincode() {
-  infoln "Invoking chaincode on ${1-"default peer"} for $2 with $3 on channel ${CC_CHANNEL-"default channel"}..."
+  channel=$CC_CHANNEL
+
+  if [[ $# -eq 1 ]]; then
+    # If there's only one argument, it's the functionName
+    node="default"
+    function_name=$1
+    arguments=""
+    transient=""
+    shift
+  elif [[ "$2" =~ ^-- ]]; then
+    # If the second argument starts with "--", there's no node specified
+    node="default"
+    function_name=$1
+    shift
+  else
+    # If the second argument doesn't start with "--", it's the node name
+    node=$1
+    function_name=$2
+    shift 2
+  fi
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+    --arguments)
+      arguments="$2"
+      shift 2
+      ;;
+    --transient)
+      transient="$2"
+      shift 2
+      ;;
+    --channel)
+      channel="$2"
+      shift 2
+      ;;
+    *)
+      fatalln "Unknown option: $1"
+      ;;
+    esac
+  done
+
+  infoln "Invoking chaincode on $node for $function_name with ${arguments-"NO ARGUMENTS"} and transient data ${transient-"NONE"} on channel ${channel-"default channel"}..."
 
   peer_id=$(getPeerId $1)
 
-  if [ -n "$CC_CHANNEL" ]; then
-    channel_name=", \"channelName\": \"$CC_CHANNEL\""
-    post /peers/${peer_id}/chaincodes/invoke '{"chaincodeName": "'$CC_NAME'", "channelName": "'$CC_CHANNEL'", "functionName": "'$2'", "functionArgs": '${3:-[]}'}'
-  else
-    post /peers/${peer_id}/chaincodes/invoke '{"chaincodeName": "'$CC_NAME'", "functionName": "'$2'", "functionArgs": '${3:-[]}'}'
+  # Construct the JSON payload
+  json_payload='{"chaincodeName": "'$CC_NAME'", "functionName": "'$function_name'", "functionArgs": '${arguments:-[]}
+
+  # Add channel if it exists
+  if [ -n "$channel" ]; then
+    json_payload+=', "channelName": "'$channel'"'
   fi
+
+  # Add transient data if it exists
+  if [ -n "$transient" ]; then
+    json_payload+=', "transientData": '$transient
+  fi
+
+  json_payload+='}'
+
+  echo $json_payload
+
+  # Execute request
+  post /peers/${peer_id}/chaincodes/invoke "$json_payload"
 
   successln "done"
 }
 
 queryChaincode() {
-  infoln "Querying chaincode on ${1-"default peer"} for $2 with $3 on channel ${CC_CHANNEL-"default channel"}..."
+  channel=$CC_CHANNEL
 
-  input=$3
+  if [[ $# -eq 1 ]]; then
+    # If there's only one argument, it's the functionName
+    node="default"
+    function_name=$1
+    shift
+  elif [[ "$2" =~ ^-- ]]; then
+    # If the second argument starts with "--", there's no node specified
+    node="default"
+    function_name=$1
+    shift
+  else
+    # If the second argument doesn't start with "--", it's the node name
+    node=$1
+    function_name=$2
+    shift 2
+  fi
 
-  if [[ -n $input && $input != \[* && $input != *\] ]]; then
-    function_args="&function_args[]=$input"
-  elif [[ -n $input && $input != '[]' ]]; then
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+    --arguments)
+      arguments="$2"
+      shift 2
+      ;;
+    --channel)
+      channel="$2"
+      shift 2
+      ;;
+    *)
+      fatalln "Unknown option: $1"
+      ;;
+    esac
+  done
+
+  infoln "Querying chaincode on $node for $function_name with ${arguments-"NO ARGUMENTS"} on channel ${channel-"default channel"}..."
+
+  # Parse and format the arguments to query string
+  if [[ -n $arguments && $arguments != \[* && $arguments != *\] ]]; then
+    query_arguments="&function_args[]=$arguments"
+  elif [[ -n $arguments && $arguments != '[]' ]]; then
     delimiter="|"
 
     # Remove spaces
-    input="${input// /}"
+    arguments="${arguments// /}"
 
     # Remove brackets and quotes
-    input="${input//[\"/}"
-    input="${input//\"]/}"
+    arguments="${arguments//[\"/}"
+    arguments="${arguments//\"]/}"
 
     # Replace commas between quotes with a different delimiter
-    input="${input//\",\"/$delimiter}"
+    arguments="${arguments//\",\"/$delimiter}"
 
     # Replace delimiter with '&function_args[]='
-    input="${input//$delimiter/\&function_args[]=}"
+    arguments="${inpargumentsut//$delimiter/\&function_args[]=}"
 
     # Add 'function_args[]=' to the beginning
-    function_args="&function_args[]=$input"
+    query_arguments="&function_args[]=$arguments"
   else
-    function_args=""
+    query_arguments=""
   fi
 
   peer_id=$(getPeerId $1)
 
-  if [ -n "$CC_CHANNEL" ]; then
-    channel_name="&channel=$CC_CHANNEL"
+  if [ -n "$channel" ]; then
+    query_channel="&channel=$channel"
   else
-    channel_name=""
+    query_channel=""
   fi
 
-  get "/peers/${peer_id}/chaincodes/query?chaincode=$CC_NAME&function_name=${2}${function_args}${channel_name}"
+  # Execute request
+  get "/peers/${peer_id}/chaincodes/query?chaincode=$CC_NAME&function_name=${function_name}${query_arguments}${query_channel}"
 
   successln "done"
 }
@@ -459,8 +555,7 @@ createChannel() {
       shift 2
       ;;
     *)
-      errorln "Unknown option: $1"
-      return 1
+      fatalln "Unknown option: $1"
       ;;
     esac
   done
@@ -587,29 +682,11 @@ main() {
     ;;
   invoke)
     validateEnvVariables
-    if [ $# -eq 2 ]; then
-      invokeChaincode "default" $2
-    elif [ $# -eq 3 ]; then
-      invokeChaincode "default" $2 "$3"
-    elif [ $# -eq 4 ]; then
-      invokeChaincode "$2" $3 "$4"
-    else
-      echo "Error: Incorrect number of arguments provided, at least function name must be provided"
-      return 1
-    fi
+    invokeChaincode "${@:2}"
     ;;
   query)
     validateEnvVariables
-    if [ $# -eq 2 ]; then
-      queryChaincode "default" $2
-    elif [ $# -eq 3 ]; then
-      queryChaincode "default" $2 "$3"
-    elif [ $# -eq 4 ]; then
-      queryChaincode "$2" $3 "$4"
-    else
-      echo "Error: Incorrect number of arguments provided, at least function name must be provided"
-      return 1
-    fi
+    queryChaincode "${@:2}"
     ;;
   create-channel)
     validateEnvVariables
