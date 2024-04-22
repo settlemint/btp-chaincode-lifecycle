@@ -2,7 +2,7 @@
 
 Scripts to manage the chaincode lifecycle on the BTP platform
 
-```
+```bash
 Usage: ./chaincode.sh <command> [options]
 Commands:
   peers                   : Query the peers on which we can install the chaincode
@@ -35,4 +35,24 @@ Commands:
   peer-leave-channel <peer> <channel_name>       : Peer leaves a channel.
 Options:
   -h, --help              : Display this help message
+```
+## Prerequisites
+
+You will need following environment variables
+
+```bash
+export CC_RUNTIME_LANGUAGE=node
+export CC_SRC_PATH=./dist
+export CC_NAME=chaincodeName
+export CC_VERSION=1.0
+export CC_SEQUENCE=1
+export CC_INIT_FCN=InitLedger
+```
+
+Optionally, you can set the following environment variables
+
+```bash
+export CC_INIT_ARGS="[]"
+export CC_COLLECTIONS_CONFIG_PATH=./collections_config.json
+export CC_CHANNEL="mychannel" # Default would be default-channel
 ```
