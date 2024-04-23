@@ -227,7 +227,8 @@ installChaincode() {
 
   result=$(curl -A "Chaincode lifecycle" -F "file=@./${CC_NAME}.tar.gz" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -w "%{http_code}" -o /dev/null ${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}/peers/${peer_id}/chaincodes/install)
 
-  if [ "$result" -ge 400 ]; then
+  # 408 and 504 are timeout errors, so we should start polling
+  if [ "$response" -ge 400 ] && [ "$response" -ne 408 ] && [ "$response" -ne 504 ]; then
     fatalln "Request failed with HTTP status code $result"
   fi
 
