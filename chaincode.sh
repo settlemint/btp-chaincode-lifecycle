@@ -167,14 +167,24 @@ checkCommitReadiness() {
 }
 
 compileSourceCode() {
-  infoln "Compiling TypeScript code into JavaScript..."
-  npm run build
-  successln "Finished compiling TypeScript code into JavaScript"
+  if [ "$CC_RUNTIME_LANGUAGE" = "golang" ]; then
+    infoln "Vendoring Go dependencies at $CC_SRC_PATH"
+    pushd $CC_SRC_PATH
+    go mod vendor
+    popd
+    successln "Finished vendoring Go dependencies"
+  elif [ "$CC_RUNTIME_LANGUAGE" = "node" ]; then
+    infoln "Compiling TypeScript code into JavaScript..."
+    npm run build
+    successln "Finished compiling TypeScript code into JavaScript"
+  fi
 }
 
 packageChaincode() {
   infoln "Packaging chaincode ${CC_VERSION}..."
-  cp ./package.json ${CC_SRC_PATH}/package.json
+  if [ -f ./package.json ]; then
+    cp ./package.json ${CC_SRC_PATH}/package.json
+  fi
   set -x
   peer lifecycle chaincode package ./${CC_NAME}.tar.gz \
     --path ${CC_SRC_PATH} \
@@ -185,7 +195,9 @@ packageChaincode() {
   cat log.txt
   verifyResult $res "Chaincode packaging has failed"
   successln "Chaincode is packaged"
-  rm ${CC_SRC_PATH}/package.json
+  if [ -f ${CC_SRC_PATH}/package.json ]; then
+    rm ${CC_SRC_PATH}/package.json
+  fi
 }
 
 compileAndPackageChaincode() {
@@ -215,10 +227,8 @@ installChaincode() {
 
   result=$(curl -A "Chaincode lifecycle" -F "file=@./${CC_NAME}.tar.gz" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -w "%{http_code}" -o /dev/null ${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}/peers/${peer_id}/chaincodes/install)
 
-  # Check if curl command returned status code 500
-  if [ "$result" -eq 500 ]; then
-    errorln "Error: HTTP status code 500, exiting..."
-    exit 1
+  if [ "$result" -ge 400 ]; then
+    fatalln "Request failed with HTTP status code $result"
   fi
 
   infoln "Request to install chaincode sent, will start polling to check if chaincode is installed..."
@@ -642,23 +652,23 @@ main() {
     ;;
   channels)
     validateEnvVariables
-    queryChannels "$2"
+    queryChannels $2
     ;;
   installed)
     validateEnvVariables
-    queryInstalledChaincode "$2"
+    queryInstalledChaincode $2
     ;;
   approved)
     validateEnvVariables
-    queryApprovedChaincode "$2"
+    queryApprovedChaincode $2
     ;;
   committed)
     validateEnvVariables
-    queryCommittedChaincode "$2"
+    queryCommittedChaincode $2
     ;;
   commit-readiness)
     validateEnvVariables
-    checkCommitReadiness "$2"
+    checkCommitReadiness $2
     ;;
   package)
     validateEnvVariables
@@ -666,19 +676,19 @@ main() {
     ;;
   install)
     validateEnvVariables
-    installChaincode "$2"
+    installChaincode $2
     ;;
   approve)
     validateEnvVariables
-    approveChaincode "$2"
+    approveChaincode $2
     ;;
   commit)
     validateEnvVariables
-    commitChaincode "$2"
+    commitChaincode $2
     ;;
   init)
     validateEnvVariables
-    initChaincode "$2"
+    initChaincode $2
     ;;
   invoke)
     validateEnvVariables
@@ -694,19 +704,19 @@ main() {
     ;;
   orderer-join-channel)
     validateEnvVariables
-    ordererJoinChannel "$2" "$3"
+    ordererJoinChannel $2 "$3"
     ;;
   peer-join-channel)
     validateEnvVariables
-    peerJoinChannel "$2" "$3"
+    peerJoinChannel $2 "$3"
     ;;
   orderer-leave-channel)
     validateEnvVariables
-    ordererLeaveChannel "$2" "$3"
+    ordererLeaveChannel $2 "$3"
     ;;
   peer-leave-channel)
     validateEnvVariables
-    peerLeaveChannel "$2" "$3"
+    peerLeaveChannel $2 "$3"
     ;;
   -h | --help | help)
     usage
