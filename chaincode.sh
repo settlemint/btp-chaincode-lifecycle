@@ -149,7 +149,7 @@ checkCommitReadiness() {
 
   if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ] || [ -n "$CC_SIGNATURE_POLICY" ]; then
     if [ -n "$CC_SIGNATURE_POLICY" ]; then
-      signature_policy=", \"signaturePolicy\": \"$CC_SIGNATURE_POLICY\")"
+      signature_policy=", \"signaturePolicy\": \"$CC_SIGNATURE_POLICY\""
     else
       signature_policy=""
     fi
@@ -291,7 +291,7 @@ approveChaincode() {
   fi
 
   if [ -n "$CC_SIGNATURE_POLICY" ]; then
-    signature_policy=", \"signaturePolicy\": \"$CC_SIGNATURE_POLICY\")"
+    signature_policy=", \"signaturePolicy\": \"$CC_SIGNATURE_POLICY\""
   else
     signature_policy=""
   fi
@@ -346,7 +346,7 @@ commitChaincode() {
   fi
 
   if [ -n "$CC_SIGNATURE_POLICY" ]; then
-    signature_policy=", \"signaturePolicy\": \"$CC_SIGNATURE_POLICY\")"
+    signature_policy=", \"signaturePolicy\": \"$CC_SIGNATURE_POLICY\""
   else
     signature_policy=""
   fi
