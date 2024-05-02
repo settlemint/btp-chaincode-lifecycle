@@ -161,7 +161,7 @@ checkCommitReadiness() {
 
     if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
       # if i don't do it this way collection config might get evaluated too early and we don't sent valid json
-      post /peers/${peer_id}/chaincodes/commit-readiness "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})${channel_name}${signature_policy}}"
+      post /peers/${peer_id}/chaincodes/commit-readiness "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH} | tr -d '\n')${channel_name}${signature_policy}}"
     else
       post /peers/${peer_id}/chaincodes/commit-readiness "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${channel_name}${signature_policy}}"
     fi
@@ -285,7 +285,7 @@ approveChaincode() {
   fi
 
   if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
-    collections_config=", \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})"
+    collections_config=", \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH} | tr -d '\n')"
   else
     collections_config=""
   fi
@@ -340,7 +340,7 @@ commitChaincode() {
   fi
 
   if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
-    collections_config=", \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})"
+    collections_config=", \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH} | tr -d '\n')"
   else
     collections_config=""
   fi
