@@ -147,13 +147,24 @@ checkCommitReadiness() {
     init_required="false"
   fi
 
-  if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
+  if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ] || [ -n "$CC_SIGNATURE_POLICY" ]; then
+    if [ -n "$CC_SIGNATURE_POLICY" ]; then
+      signature_policy=", \"signaturePolicy\": \"$CC_SIGNATURE_POLICY\")"
+    else
+      signature_policy=""
+    fi
     if [ -n "$CC_CHANNEL" ]; then
       channel_name=", \"channelName\": \"$CC_CHANNEL\""
     else
       channel_name=""
     fi
-    post /peers/${peer_id}/chaincodes/commit-readiness "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})${channel_name}}"
+
+    if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
+      # if i don't do it this way collection config might get evaluated too early and we don't sent valid json
+      post /peers/${peer_id}/chaincodes/commit-readiness "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH})${channel_name}${signature_policy}}"
+    else
+      post /peers/${peer_id}/chaincodes/commit-readiness "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${channel_name}${signature_policy}}"
+    fi
   else
     if [ -n "$CC_CHANNEL" ]; then
       channel_name="&channel=$CC_CHANNEL"
@@ -279,13 +290,19 @@ approveChaincode() {
     collections_config=""
   fi
 
+  if [ -n "$CC_SIGNATURE_POLICY" ]; then
+    signature_policy=", \"signaturePolicy\": \"$CC_SIGNATURE_POLICY\")"
+  else
+    signature_policy=""
+  fi
+
   if [ -n "$CC_CHANNEL" ]; then
     channel_name=", \"channelName\": \"$CC_CHANNEL\""
   else
     channel_name=""
   fi
 
-  post /peers/${peer_id}/chaincodes/approve "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${channel_name}}"
+  post /peers/${peer_id}/chaincodes/approve "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
   successln "Done"
 }
 
@@ -328,13 +345,19 @@ commitChaincode() {
     collections_config=""
   fi
 
+  if [ -n "$CC_SIGNATURE_POLICY" ]; then
+    signature_policy=", \"signaturePolicy\": \"$CC_SIGNATURE_POLICY\")"
+  else
+    signature_policy=""
+  fi
+
   if [ -n "$CC_CHANNEL" ]; then
     channel_name=", \"channelName\": \"$CC_CHANNEL\""
   else
     channel_name=""
   fi
 
-  post /peers/${peer_id}/chaincodes/commit "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${channel_name}}"
+  post /peers/${peer_id}/chaincodes/commit "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
 
   infoln "Request to commit chaincode sent, will start polling to check if chaincode is committed..."
 
