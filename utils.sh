@@ -61,6 +61,15 @@ post() {
   curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X POST -d "$2" "${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1"
 }
 
+postWithFailOnError() {
+  result=$(curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -w "%{http_code}" -o /dev/null -X POST -d "$2" "${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1")
+
+  # 408 and 504 are timeout errors, so we should start polling
+  if [ "$result" -ge 400 ] && [ "$result" -ne 408 ] && [ "$result" -ne 504 ]; then
+    fatalln "Request failed with HTTP status code $result"
+  fi
+}
+
 findAndSourceEnv() {
   dir="$1"
   while [ "$dir" != "/" ]; do

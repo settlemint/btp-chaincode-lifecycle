@@ -357,7 +357,7 @@ commitChaincode() {
     channel_name=""
   fi
 
-  post /peers/${peer_id}/chaincodes/commit "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
+  postWithFailOnError /peers/${peer_id}/chaincodes/commit "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
 
   infoln "Request to commit chaincode sent, will start polling to check if chaincode is committed..."
 
