@@ -395,6 +395,7 @@ initChaincode() {
 
   if [ -z "$CC_INIT_FCN" ]; then
     warnln "No CC_INIT_FCN function specified, skipping chaincode initialization."
+    exit 0
   fi
 
   peer_id=$(getPeerId $1)
