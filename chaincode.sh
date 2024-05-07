@@ -522,21 +522,23 @@ queryChaincode() {
   elif [[ -n $arguments && $arguments != '[]' ]]; then
     delimiter="|"
 
+    input_arguments="${arguments}"
+
     # Remove spaces
-    arguments="${arguments// /}"
+    input_arguments="${input_arguments// /}"
 
     # Remove brackets and quotes
-    arguments="${arguments//[\"/}"
-    arguments="${arguments//\"]/}"
+    input_arguments="${input_arguments//[\"/}"
+    input_arguments="${input_arguments//\"]/}"
 
     # Replace commas between quotes with a different delimiter
-    arguments="${arguments//\",\"/$delimiter}"
+    input_arguments="${input_arguments//\",\"/$delimiter}"
 
     # Replace delimiter with '&function_args[]='
-    arguments="${inpargumentsut//$delimiter/\&function_args[]=}"
+    input_arguments="${input_arguments//$delimiter/\&function_args[]=}"
 
     # Add 'function_args[]=' to the beginning
-    query_arguments="&function_args[]=$arguments"
+    query_arguments="&function_args[]=$input_arguments"
   else
     query_arguments=""
   fi

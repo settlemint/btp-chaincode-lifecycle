@@ -16,7 +16,7 @@ validateEnvVariables() {
   println "- CC_NAME: ${C_GREEN}${CC_NAME}${C_RESET}"
   println "- CC_VERSION: ${C_GREEN}${CC_VERSION}${C_RESET}"
   println "- CC_SEQUENCE: ${C_GREEN}${CC_SEQUENCE}${C_RESET}"
-  println "- CC_INIT_FCN: ${C_GREEN}${CC_INIT_FCN}${C_RESET}"
+  println "- CC_INIT_FCN: ${C_GREEN}${CC_INIT_FCN-"NONE"}${C_RESET}"
   println "- CC_INIT_ARGS: ${C_GREEN}${CC_INIT_ARGS-"EMPTY"}${C_RESET}"
   println "- CC_CHANNEL: ${C_GREEN}${CC_CHANNEL-"default-channel"}${C_RESET}"
   println "- CC_COLLECTIONS_CONFIG_PATH: ${C_GREEN}${CC_COLLECTIONS_CONFIG_PATH-"NONE"}${C_RESET}"
