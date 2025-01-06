@@ -5,41 +5,41 @@ Scripts to manage the chaincode lifecycle on the BTP platform
 ```bash
 Usage: ./chaincode.sh <command> [options]
 Commands:
-  peers                   : Query the peers on which we can install the chaincode
-  orderers                : Query the orderers
-  nodes                   : Query all the nodes
-  channels                : Query the channels
-  installed <peer>        : Query installed chaincodes
-  approved <peer>         : Query approved definition of chaincode
-  committed <peer>        : Query commit definition of chaincode
-  commit-readiness <peer> : Checking commit readiness of chaincode
-  package                 : Package the chaincode
-  install <peer>          : Install the chaincode
-  approve <peer>          : Approve the chaincode
-  commit <peer>           : Commit the chaincode
-  init <peer>             : Initialize the chaincode
-  query <peer> <function_name> [options]         : Query the chaincode.
+  peers                              : Query the peers on which we can install the chaincode
+  orderers                           : Query the orderers
+  nodes                              : Query all the nodes
+  channels <node>                    : Query the channels
+  installed <peer>                   : Query installed chaincodes
+  approved <peer>                    : Query approved definition of chaincode
+  committed <peer>                   : Query commit definition of chaincode
+  commit-readiness <peer>            : Checking commit readiness of chaincode
+  package                            : Package the chaincode
+  install <peer>                     : Install the chaincode
+  approve <peer> <orderer>           : Approve the chaincode
+  commit <peer> <orderer>            : Commit the chaincode
+  init <peer> <orderer>              : Initialize the chaincode
+  query <peer> <function_name> [options]                   : Query the chaincode.
     Options:
-      --arguments '["arg1", "arg2"]'             : The regular arguments to pass to the function.
-      --channel <channel_name>                   : Optionally override the channel name.
+      --arguments '["arg1", "arg2"]'                       : The regular arguments to pass to the function.
+      --channel <channel_name>                             : Optionally override the channel name.
     Example: chaincode.sh query functionName --arguments '["arg1", "arg2"]'
-  invoke <peer> <function_name> [options]        : Invoke a transaction on the chaincode.
+  invoke <peer> <orderer> <function_name> [options]        : Invoke a transaction on the chaincode.
     Options:
-      --arguments '["arg1", "arg2"]'             : The regular arguments to pass to the function.
-      --transient '{"key": "value"}'             : The transient data to pass the to the function.
-      --channel <channel_name>                   : Optionally override the channel name.
+      --arguments '["arg1", "arg2"]'                       : The regular arguments to pass to the function.
+      --transient '{"key": "value"}'                       : The transient data to pass the to the function.
+      --channel <channel_name>                             : Optionally override the channel name.
     Example: chaincode.sh invoke functionName '["arg1", "arg2"]'
-  create-channel <channel_name> [options]        : Create a channel with the given name and options
+  create-channel <orderer> <channel_name> [options]        : Create a channel with the given name and options
     Options:
-      --endorsementPolicy <MAJORITY|ALL>         : Endorsement policy for the channel (default: MAJORITY)
-      --batchTimeoutInSeconds <seconds>          : Batch timeout in seconds (default: 2)
-      --maxMessageCount <count>                  : Maximum message count (default: 500)
-      --absoluteMaxMB <MB>                       : Absolute maximum bytes (default: 10)
-      --preferredMaxMB <MB>                      : Preferred maximum bytes (default: 2)
-  orderer-join-channel <orderer> <channel_name>  : Orderer joins a channel.
-  orderer-leave-channel <orderer> <channel_name> : Orderer leaves a channel.
-  peer-join-channel <peer> <channel_name>        : Peer joins a channel.
-  peer-leave-channel <peer> <channel_name>       : Peer leaves a channel.
+      --endorsementPolicy <MAJORITY|ALL>                   : Endorsement policy for the channel (default: MAJORITY)
+      --batchTimeoutInSeconds <seconds>                    : Batch timeout in seconds (default: 2)
+      --maxMessageCount <count>                            : Maximum message count (default: 500)
+      --absoluteMaxMB <MB>                                 : Absolute maximum bytes (default: 10)
+      --preferredMaxMB <MB>                                : Preferred maximum bytes (default: 2)
+  orderer-join-channel <orderer> <channel_name>            : Orderer joins a channel.
+  orderer-leave-channel <orderer> <channel_name>           : Orderer leaves a channel.
+  peer-join-channel <peer> <channel_name>                  : Peer joins a channel.
+  peer-leave-channel <peer> <channel_name>                 : Peer leaves a channel.
 Options:
   -h, --help              : Display this help message
 ```
