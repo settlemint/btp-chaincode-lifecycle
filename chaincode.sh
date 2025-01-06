@@ -100,8 +100,8 @@ queryOrderers() {
 }
 
 queryChannels() {
-  infoln "Querying channels for ${1-"default orderer"}..."
-  node_id=$(getNodeId $1 "orderer")
+  infoln "Querying channels for ${1}..."
+  node_id=$(getNodeId $1)
   get "/channels?node=$node_id" | jq -r '.[] | "Channel Name: \(.)"'
   successln "Done"
 }
@@ -545,7 +545,7 @@ createChannel() {
   # Parse command line arguments
   channel_name="$2"
   orderer_id=$(getOrdererId $1)
-  shift
+  shift 2
 
   while [[ $# -gt 0 ]]; do
     case $1 in
