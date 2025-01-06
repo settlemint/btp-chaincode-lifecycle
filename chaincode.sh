@@ -47,7 +47,7 @@ usage() {
   echo "  peer-join-channel <peer> <channel_name>                  : Peer joins a channel."
   echo "  peer-leave-channel <peer> <channel_name>                 : Peer leaves a channel."
   echo "Options:"
-  echo "  -h, --help              : Display this help message"
+  echo "  -h, --help                         : Display this help message"
   # Add more options if needed
 }
 
