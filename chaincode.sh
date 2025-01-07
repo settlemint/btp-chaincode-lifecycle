@@ -11,43 +11,43 @@ findAndSourceEnv $DIR
 usage() {
   echo "Usage: $0 <command> [options]"
   echo "Commands:"
-  echo "  peers                   : Query the peers on which we can install the chaincode"
-  echo "  orderers                : Query the orderers"
-  echo "  nodes                   : Query all the nodes"
-  echo "  channels                : Query the channels"
-  echo "  installed <peer>        : Query installed chaincodes"
-  echo "  approved <peer>         : Query approved definition of chaincode"
-  echo "  committed <peer>        : Query commit definition of chaincode"
-  echo "  commit-readiness <peer> : Checking commit readiness of chaincode"
-  echo "  package                 : Package the chaincode"
-  echo "  install <peer>          : Install the chaincode"
-  echo "  approve <peer>          : Approve the chaincode"
-  echo "  commit <peer>           : Commit the chaincode"
-  echo "  init <peer>             : Initialize the chaincode"
-  echo "  query <peer> <function_name> [options]         : Query the chaincode."
+  echo "  peers                              : Query the peers on which we can install the chaincode"
+  echo "  orderers                           : Query the orderers"
+  echo "  nodes                              : Query all the nodes"
+  echo "  channels <node>                    : Query the channels"
+  echo "  installed <peer>                   : Query installed chaincodes"
+  echo "  approved <peer>                    : Query approved definition of chaincode"
+  echo "  committed <peer>                   : Query commit definition of chaincode"
+  echo "  commit-readiness <peer>            : Checking commit readiness of chaincode"
+  echo "  package                            : Package the chaincode"
+  echo "  install <peer>                     : Install the chaincode"
+  echo "  approve <peer> <orderer>           : Approve the chaincode"
+  echo "  commit <peer> <orderer>            : Commit the chaincode"
+  echo "  init <peer> <orderer>              : Initialize the chaincode"
+  echo "  query <peer> <function_name> [options]                   : Query the chaincode."
   echo "    Options:"
-  echo "      --arguments '[\"arg1\", \"arg2\"]'             : The regular arguments to pass to the function." # extra spaces for escaped quotes
-  echo "      --channel <channel_name>                   : Optionally override the channel name."
-  echo "    Example: chaincode.sh query functionName --arguments '[\"arg1\", \"arg2\"]'"
-  echo "  invoke <peer> <function_name> [options]        : Invoke a transaction on the chaincode."
+  echo "      --arguments '[\"arg1\", \"arg2\"]'                   : The regular arguments to pass to the function." 
+  echo "      --channel <channel_name>                             : Optionally override the channel name."
+  echo "  Example: chaincode.sh query functionName --arguments '[\"arg1\", \"arg2\"]'"
+  echo "  invoke <peer> <orderer> <function_name> [options]        : Invoke a transaction on the chaincode."
   echo "    Options:"
-  echo "      --arguments '[\"arg1\", \"arg2\"]'             : The regular arguments to pass to the function."  # extra spaces for escaped quotes
-  echo "      --transient '{\"key\": \"value\"}'             : The transient data to pass the to the function." # extra spaces for escaped quotes
-  echo "      --channel <channel_name>                   : Optionally override the channel name."
+  echo "      --arguments '[\"arg1\", \"arg2\"]'                   : The regular arguments to pass to the function."
+  echo "      --transient '{\"key\": \"value\"}'                   : The transient data to pass the to the function."
+  echo "      --channel <channel_name>                             : Optionally override the channel name."
   echo "    Example: chaincode.sh invoke functionName '[\"arg1\", \"arg2\"]'"
-  echo "  create-channel <channel_name> [options]        : Create a channel with the given name and options"
+  echo "  create-channel <orderer> <channel_name> [options]        : Create a channel with the given name and options"
   echo "    Options:"
-  echo "      --endorsementPolicy <MAJORITY|ALL>         : Endorsement policy for the channel (default: MAJORITY)"
-  echo "      --batchTimeoutInSeconds <seconds>          : Batch timeout in seconds (default: 2)"
-  echo "      --maxMessageCount <count>                  : Maximum message count (default: 500)"
-  echo "      --absoluteMaxMB <MB>                       : Absolute maximum bytes (default: 10)"
-  echo "      --preferredMaxMB <MB>                      : Preferred maximum bytes (default: 2)"
-  echo "  orderer-join-channel <orderer> <channel_name>  : Orderer joins a channel."
-  echo "  orderer-leave-channel <orderer> <channel_name> : Orderer leaves a channel."
-  echo "  peer-join-channel <peer> <channel_name>        : Peer joins a channel."
-  echo "  peer-leave-channel <peer> <channel_name>       : Peer leaves a channel."
+  echo "      --endorsementPolicy <MAJORITY|ALL>                   : Endorsement policy for the channel (default: MAJORITY)"
+  echo "      --batchTimeoutInSeconds <seconds>                    : Batch timeout in seconds (default: 2)"
+  echo "      --maxMessageCount <count>                            : Maximum message count (default: 500)"
+  echo "      --absoluteMaxMB <MB>                                 : Absolute maximum bytes (default: 10)"
+  echo "      --preferredMaxMB <MB>                                : Preferred maximum bytes (default: 2)"
+  echo "  orderer-join-channel <orderer> <channel_name>            : Orderer joins a channel."
+  echo "  orderer-leave-channel <orderer> <channel_name>           : Orderer leaves a channel."
+  echo "  peer-join-channel <peer> <channel_name>                  : Peer joins a channel."
+  echo "  peer-leave-channel <peer> <channel_name>                 : Peer leaves a channel."
   echo "Options:"
-  echo "  -h, --help              : Display this help message"
+  echo "  -h, --help                         : Display this help message"
   # Add more options if needed
 }
 
@@ -100,8 +100,8 @@ queryOrderers() {
 }
 
 queryChannels() {
-  infoln "Querying channels for ${1-"default orderer"}..."
-  node_id=$(getNodeId $1 "orderer")
+  infoln "Querying channels for ${1}..."
+  node_id=$(getNodeId $1)
   get "/channels?node=$node_id" | jq -r '.[] | "Channel Name: \(.)"'
   successln "Done"
 }
@@ -275,8 +275,9 @@ installChaincode() {
 }
 
 approveChaincode() {
-  infoln "Approving chaincode on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
+  infoln "Approving chaincode on peer ${1} to be committed on orderer ${2} for channel ${CC_CHANNEL-"default channel"}..."
   peer_id=$(getPeerId $1)
+  orderer_id=$(getOrdererId $2)
 
   if [ -n "$CC_INIT_FCN" ]; then
     init_required="true"
@@ -302,7 +303,7 @@ approveChaincode() {
     channel_name=""
   fi
 
-  post /peers/${peer_id}/chaincodes/approve "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
+  post /peers/${peer_id}/orderers/${orderer_id}/chaincodes/approve "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
   successln "Done"
 }
 
@@ -325,8 +326,9 @@ isChaincodeCommitted() {
 }
 
 commitChaincode() {
-  infoln "Committing chaincode on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
-  peer_id=$(getPeerId $1 $2)
+  infoln "Committing chaincode on peer ${1} to orderer ${2} for channel ${CC_CHANNEL-"default channel"}..."
+  peer_id=$(getPeerId $1)
+  orderer_id=$(getOrdererId $2)
 
   if isChaincodeCommitted $peer_id; then
     successln "Chaincode already committed"
@@ -357,7 +359,7 @@ commitChaincode() {
     channel_name=""
   fi
 
-  postWithFailOnError /peers/${peer_id}/chaincodes/commit "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
+  postWithFailOnError /peers/${peer_id}/orderers/${orderer_id}/chaincodes/commit "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
 
   infoln "Request to commit chaincode sent, will start polling to check if chaincode is committed..."
 
@@ -391,7 +393,7 @@ commitChaincode() {
 }
 
 initChaincode() {
-  infoln "Initializing chaincode on ${1-"default peer"} on channel ${CC_CHANNEL-"default channel"}..."
+  infoln "Initializing chaincode on peer ${1} to orderer ${2} on channel ${CC_CHANNEL-"default channel"}..."
 
   if [ -z "$CC_INIT_FCN" ]; then
     warnln "No CC_INIT_FCN function specified, skipping chaincode initialization."
@@ -399,11 +401,12 @@ initChaincode() {
   fi
 
   peer_id=$(getPeerId $1)
+  orderer_id=$(getOrdererId $2)
 
   if [ -n "$CC_CHANNEL" ]; then
-    post /peers/${peer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"channelName\": \"$CC_CHANNEL\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
+    post /peers/${peer_id}/orderers/${orderer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"channelName\": \"$CC_CHANNEL\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
   else
-    post /peers/${peer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
+    post /peers/${peer_id}/orderers/${orderer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
   fi
 
   successln "done"
@@ -412,24 +415,10 @@ initChaincode() {
 invokeChaincode() {
   channel=$CC_CHANNEL
 
-  if [[ $# -eq 1 ]]; then
-    # If there's only one argument, it's the functionName
-    node="default"
-    function_name=$1
-    arguments=""
-    transient=""
-    shift
-  elif [[ "$2" =~ ^-- ]]; then
-    # If the second argument starts with "--", there's no node specified
-    node="default"
-    function_name=$1
-    shift
-  else
-    # If the second argument doesn't start with "--", it's the node name
-    node=$1
-    function_name=$2
-    shift 2
-  fi
+  peer=$1
+  orderer=$2
+  function_name=$3
+  shift 3
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -451,9 +440,7 @@ invokeChaincode() {
     esac
   done
 
-  infoln "Invoking chaincode on $node for $function_name with ${arguments-"NO ARGUMENTS"} and transient data ${transient-"NONE"} on channel ${channel-"default channel"}..."
-
-  peer_id=$(getPeerId $1)
+  infoln "Invoking chaincode on peer $peer to orderer $orderer for $function_name with ${arguments-"NO ARGUMENTS"} and transient data ${transient-"NONE"} on channel ${channel-"default channel"}..."
 
   # Construct the JSON payload
   json_payload='{"chaincodeName": "'$CC_NAME'", "functionName": "'$function_name'", "functionArgs": '${arguments:-[]}
@@ -472,8 +459,11 @@ invokeChaincode() {
 
   echo $json_payload
 
+  peer_id=$(getPeerId $peer)
+  orderer_id=$(getOrdererId $orderer)
+
   # Execute request
-  post /peers/${peer_id}/chaincodes/invoke "$json_payload"
+  post /peers/${peer_id}/orderers/${orderer_id}/chaincodes/invoke "$json_payload"
 
   successln "done"
 }
@@ -481,22 +471,9 @@ invokeChaincode() {
 queryChaincode() {
   channel=$CC_CHANNEL
 
-  if [[ $# -eq 1 ]]; then
-    # If there's only one argument, it's the functionName
-    node="default"
-    function_name=$1
-    shift
-  elif [[ "$2" =~ ^-- ]]; then
-    # If the second argument starts with "--", there's no node specified
-    node="default"
-    function_name=$1
-    shift
-  else
-    # If the second argument doesn't start with "--", it's the node name
-    node=$1
-    function_name=$2
-    shift 2
-  fi
+  node=$1
+  function_name=$2
+  shift 2
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -566,8 +543,9 @@ createChannel() {
   preferred_max_mb=2 # MB
 
   # Parse command line arguments
-  channel_name="$1"
-  shift
+  channel_name="$2"
+  orderer_id=$(getOrdererId $1)
+  shift 2
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -622,9 +600,9 @@ createChannel() {
     fatalln "Preferred max bytes must be a number, found '${preferred_max_mb}'."
   fi
 
-  infoln "Creating channel ${channel_name} with configuration [endorsement_policy=${endorsement_policy}, batch_timeout_seconds=${batch_timeout_seconds}, max_message_count=${max_message_count}, absolute_max_mb=${absolute_max_mb}, preferred_max_mb=${preferred_max_mb}]..."
+  infoln "Creating channel ${channel_name} on orderer ${1} with configuration [endorsement_policy=${endorsement_policy}, batch_timeout_seconds=${batch_timeout_seconds}, max_message_count=${max_message_count}, absolute_max_mb=${absolute_max_mb}, preferred_max_mb=${preferred_max_mb}]..."
 
-  post /channels '{"name": "'$channel_name'", "endorsementPolicy": "'$endorsement_policy'", "batchTimeoutSeconds": '$batch_timeout_seconds', "maxMessageCount": '$max_message_count', "absoluteMaxMB": '$absolute_max_mb', "preferredMaxMB": '$preferred_max_mb'}'
+  post /orderers/${orderer_id}/channels '{"name": "'$channel_name'", "endorsementPolicy": "'$endorsement_policy'", "batchTimeoutSeconds": '$batch_timeout_seconds', "maxMessageCount": '$max_message_count', "absoluteMaxMB": '$absolute_max_mb', "preferredMaxMB": '$preferred_max_mb'}'
 
   successln "done"
 }
@@ -707,15 +685,15 @@ main() {
     ;;
   approve)
     validateEnvVariables
-    approveChaincode $2
+    approveChaincode ${@:2}
     ;;
   commit)
     validateEnvVariables
-    commitChaincode $2
+    commitChaincode ${@:2}
     ;;
   init)
     validateEnvVariables
-    initChaincode $2
+    initChaincode ${@:2}
     ;;
   invoke)
     validateEnvVariables
