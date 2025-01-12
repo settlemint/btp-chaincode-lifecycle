@@ -116,8 +116,8 @@ queryOrderers() {
 
 queryChannels() {
   infoln "Querying channels for ${1}..."
-  node_id=$(getNodeId $1)
-  get "/channels?node=$node_id" | jq -r '.[] | "Channel Name: \(.)"'
+  echo "Channel names peer has joined:"
+  getChannelData "/nodes/$1" | jq -r '.[1:][] | "- \(.)"'
   successln "Done"
 }
 
