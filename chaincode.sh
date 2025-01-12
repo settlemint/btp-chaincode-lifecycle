@@ -11,9 +11,9 @@ findAndSourceEnv $DIR
 usage() {
   echo "Usage: $0 <command> [options]"
   echo "Commands:"
-  echo "  peers                              : Query the peers on which we can install the chaincode"
-  echo "  orderers                           : Query the orderers"
-  echo "  nodes                              : Query all the nodes"
+  echo "  peers <application_name>           : Query the peers (defaults to SETTLEMINT_APPLICATION)"
+  echo "  orderers <application_name>        : Query the orderers (defaults to SETTLEMINT_APPLICATION)"
+  echo "  nodes <application_name>           : Query all the nodes (defaults to SETTLEMINT_APPLICATION)"
   echo "  channels <node>                    : Query the channels"
   echo "  installed <peer>                   : Query installed chaincodes"
   echo "  approved <peer>                    : Query approved definition of chaincode"
@@ -82,20 +82,35 @@ getOrdererId() {
 }
 
 queryNodes() {
-  infoln "Querying nodes..."
-  get "/nodes" | jq -r '.[] | "Node ID: \(.id), Name: \(.uniqueName), Type: \(.type), MSP Id: \(.mspId), Default: \(.default)"'
+  app_name=${1:-$SETTLEMINT_APPLICATION}
+  if [ -z "$app_name" ]; then
+    fatalln "Application name not provided and SETTLEMINT_APPLICATION not set"
+  fi
+
+  infoln "Querying nodes for application '$app_name'..."
+  getApplicationData "/$app_name/nodes" | jq -r '.[] | "Node ID: \(.id), Name: \(.uniqueName), Type: \(.type), MSP Id: \(.mspId), Default: \(.default)"'
   successln "Done"
 }
 
 queryPeers() {
-  infoln "Querying peers..."
-  get "/peers" | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId), Default: \(.default)"'
+  app_name=${1:-$SETTLEMINT_APPLICATION}
+  if [ -z "$app_name" ]; then
+    fatalln "Application name not provided and SETTLEMINT_APPLICATION not set"
+  fi
+
+  infoln "Querying peers for application '$app_name'..."
+  getApplicationData "/$app_name/peers" | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId)"'
   successln "Done"
 }
 
 queryOrderers() {
-  infoln "Querying orderers..."
-  get "/orderers" | jq -r '.[] | "Orderer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId), Default: \(.default)"'
+  app_name=${1:-$SETTLEMINT_APPLICATION}
+  if [ -z "$app_name" ]; then
+    fatalln "Application name not provided and SETTLEMINT_APPLICATION not set"
+  fi
+
+  infoln "Querying orderers for application '$app_name'..."
+  getApplicationData "/$app_name/orderers" | jq -r '.[] | "Orderer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId), Default: \(.default)"'
   successln "Done"
 }
 
@@ -645,15 +660,15 @@ main() {
   case $1 in
   peers)
     validateEnvVariables
-    queryPeers
+    queryPeers $2
     ;;
   orderers)
     validateEnvVariables
-    queryOrderers
+    queryOrderers $2
     ;;
   nodes)
     validateEnvVariables
-    queryNodes
+    queryNodes $2
     ;;
   channels)
     validateEnvVariables
