@@ -117,7 +117,8 @@ queryOrderers() {
 queryChannels() {
   infoln "Querying channels for ${1}..."
   echo "Channel names peer has joined:"
-  getChannelData "/nodes/$1" | jq -r '.[1:][] | "- \(.)"'
+  response=$(getChannelData "/nodes/$1")
+  echo "$response"
   successln "Done"
 }
 
@@ -559,7 +560,7 @@ createChannel() {
 
   # Parse command line arguments
   channel_name="$2"
-  orderer_id=$(getOrdererId $1)
+  orderer_unique_name=$1
   shift 2
 
   while [[ $# -gt 0 ]]; do
@@ -617,7 +618,7 @@ createChannel() {
 
   infoln "Creating channel ${channel_name} on orderer ${1} with configuration [endorsement_policy=${endorsement_policy}, batch_timeout_seconds=${batch_timeout_seconds}, max_message_count=${max_message_count}, absolute_max_mb=${absolute_max_mb}, preferred_max_mb=${preferred_max_mb}]..."
 
-  post /orderers/${orderer_id}/channels '{"name": "'$channel_name'", "endorsementPolicy": "'$endorsement_policy'", "batchTimeoutSeconds": '$batch_timeout_seconds', "maxMessageCount": '$max_message_count', "absoluteMaxMB": '$absolute_max_mb', "preferredMaxMB": '$preferred_max_mb'}'
+  postChannelData "" '{"ordererUniqueName": "'$orderer_unique_name'", "name": "'$channel_name'", "endorsementPolicy": "'$endorsement_policy'", "batchTimeoutSeconds": '$batch_timeout_seconds', "maxMessageCount": '$max_message_count', "absoluteMaxMB": '$absolute_max_mb', "preferredMaxMB": '$preferred_max_mb'}'
 
   successln "done"
 }
