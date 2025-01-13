@@ -72,7 +72,7 @@ postChannelData() {
 }
 
 deleteChannelData() {
-  curl -A "Channel operations" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -X DELETE "${BTP_CLUSTER_MANAGER_URL}/channels$1"
+  curl -A "Channel operations" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X DELETE "${BTP_CLUSTER_MANAGER_URL}/channels$1"
 }
 
 # Application related API calls

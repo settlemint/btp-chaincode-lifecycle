@@ -625,29 +625,25 @@ createChannel() {
 
 ordererJoinChannel() {
   infoln "Orderer ${1} joining channel ${2}..."
-  orderer_id=$(getOrdererId $1)
-  post /channels/${2}/nodes '{"nodeId": "'$orderer_id'"}'
+  postChannelData "/$2/nodes" '{"nodeUniqueName": "'$1'"}'
   successln "done"
 }
 
 peerJoinChannel() {
   infoln "Peer ${1} joining channel ${2}..."
-  peer_id=$(getPeerId $1)
-  post /channels/${2}/nodes '{"nodeId": "'$peer_id'"}'
+  postChannelData "/$2/nodes" '{"nodeUniqueName": "'$1'"}'
   successln "done"
 }
 
 ordererLeaveChannel() {
   infoln "Orderer ${1} leaving channel ${2}..."
-  orderer_id=$(getOrdererId $1)
-  delete /channels/${2}/nodes/${orderer_id}
+  deleteChannelData "/$2/nodes/$1"
   successln "done"
 }
 
 peerLeaveChannel() {
   infoln "Peer ${1} leaving channel ${2}..."
-  peer_id=$(getPeerId $1)
-  delete /channels/${2}/nodes/${peer_id}
+  deleteChannelData "/$2/nodes/${1}"
   successln "done"
 }
 
