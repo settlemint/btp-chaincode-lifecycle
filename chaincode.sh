@@ -120,7 +120,7 @@ queryOrderers() {
 
 queryOrdererChannels() {
   infoln "Querying channels for orderer ${1}..."
-  echo "Channel names orderer is a participant of:"
+  echo "Channel names orderer is a member of:"
   response=$(getChannelData "/nodes/$1")
   echo "$response"
   successln "Done"
