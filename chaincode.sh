@@ -14,7 +14,8 @@ usage() {
   echo "  peers <application_name>           : Query the peers (defaults to SETTLEMINT_APPLICATION)"
   echo "  orderers <application_name>        : Query the orderers (defaults to SETTLEMINT_APPLICATION)"
   echo "  nodes <application_name>           : Query all the nodes (defaults to SETTLEMINT_APPLICATION)"
-  echo "  channels <node>                    : Query the channels"
+  echo "  orderer-channels <orderer>         : Query the channels of the orderer"
+  echo "  peer-channels <peer>               : Query the channels of the peer"
   echo "  installed <peer>                   : Query installed chaincodes"
   echo "  approved <peer>                    : Query approved definition of chaincode"
   echo "  committed <peer>                   : Query commit definition of chaincode"
@@ -114,9 +115,17 @@ queryOrderers() {
   successln "Done"
 }
 
-queryChannels() {
+queryOrdererChannels() {
+  infoln "Querying channels for orderer ${1}..."
+  echo "Channel names orderer is a participant of:"
+  response=$(getChannelData "/nodes/$1")
+  echo "$response"
+  successln "Done"
+}
+
+queryPeerChannels() {
   infoln "Querying channels for ${1}..."
-  echo "Channel names peer has joined:"
+  echo "Channel names peer has joined: (Note: this is not the same as the channels the peer is a member of, since the peer could have left some channels)"
   response=$(getChannelData "/nodes/$1")
   echo "$response"
   successln "Done"
@@ -667,9 +676,13 @@ main() {
     validateEnvVariables
     queryNodes $2
     ;;
-  channels)
+  orderer-channels)
     validateEnvVariables
-    queryChannels $2
+    queryOrdererChannels $2
+    ;;
+  peer-channels)
+    validateEnvVariables
+    queryPeerChannels $2
     ;;
   installed)
     validateEnvVariables
