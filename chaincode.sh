@@ -339,7 +339,7 @@ isChaincodeCommitted() {
     channel_name=""
   fi
 
-  response=$(get /peers/$1/chaincodes/committed?chaincode=${CC_NAME}${channel_name})
+  response=$(getChaincodeData "/committed/peers/$1?chaincode=${CC_NAME}${channel_name}")
 
   result=$(echo "$response" | jq ".sequence == $CC_SEQUENCE and .version == \"$CC_VERSION\"")
 
