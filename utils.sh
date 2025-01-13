@@ -89,6 +89,24 @@ postWithFailOnError() {
   fi
 }
 
+
+jqFormatOrError() {
+  response=$1
+  jq_format=$2
+  
+  # First check if response is an object (not an array)
+  if echo "$response" | jq -e 'type=="object"' > /dev/null; then
+    # Then check if it's an error object
+    if echo "$response" | jq -e 'has("error")' > /dev/null; then
+      error_msg=$(echo "$response" | jq -r '.message')
+      fatalln "Error: $error_msg"
+    fi
+  fi
+  
+  # If we reach here, either it's an array or a success object
+  echo "$response" | jq -r "$jq_format"
+}
+
 findAndSourceEnv() {
   dir="$1"
   while [ "$dir" != "/" ]; do
