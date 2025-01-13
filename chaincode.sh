@@ -89,7 +89,8 @@ queryNodes() {
   fi
 
   infoln "Querying nodes for application '$app_name'..."
-  getApplicationData "/$app_name/nodes" | jq -r '.[] | "Node ID: \(.id), Name: \(.uniqueName), Type: \(.type), MSP Id: \(.mspId), Default: \(.default)"'
+  response=$(getApplicationData "/$app_name/nodes")
+  jqFormatOrError "$response" '.[] | "Node ID: \(.id), Name: \(.uniqueName), Type: \(.type), MSP Id: \(.mspId)"'
   successln "Done"
 }
 
@@ -100,7 +101,8 @@ queryPeers() {
   fi
 
   infoln "Querying peers for application '$app_name'..."
-  getApplicationData "/$app_name/peers" | jq -r '.[] | "Peer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId)"'
+  response=$(getApplicationData "/$app_name/peers")
+  jqFormatOrError "$response" '.[] | "Peer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId)"'
   successln "Done"
 }
 
@@ -111,7 +113,8 @@ queryOrderers() {
   fi
 
   infoln "Querying orderers for application '$app_name'..."
-  getApplicationData "/$app_name/orderers" | jq -r '.[] | "Orderer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId), Default: \(.default)"'
+  response=$(getApplicationData "/$app_name/orderers")
+  jqFormatOrError "$response" '.[] | "Orderer ID: \(.id), Name: \(.uniqueName), MSP Id: \(.mspId)"'
   successln "Done"
 }
 
@@ -132,40 +135,36 @@ queryPeerChannels() {
 }
 
 queryInstalledChaincode() {
-  infoln "Querying installed chaincode of ${1-default peer}..."
-  peer_id=$(getPeerId $1)
-  get "/peers/${peer_id}/chaincodes/installed" | jq -r '.[] | "Package ID: \(.package_id), Label: \(.label)"'
+  infoln "Querying installed chaincode of ${1}..."
+  response=$(getChaincodeData "/installed/peers/$1")
+  jqFormatOrError "$response" '.[] | "Package ID: \(.package_id), Label: \(.label)"'
   successln "Done"
 }
 
 queryApprovedChaincode() {
   infoln "Querying approved chaincode definition on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
-  peer_id=$(getPeerId $1)
   if [ -n "$CC_CHANNEL" ]; then
     channel_name="&channel=$CC_CHANNEL"
   else
     channel_name=""
   fi
-  get "/peers/${peer_id}/chaincodes/approved?chaincode=${CC_NAME}${channel_name}"
+  getChaincodeData "/approved/peers/$1?chaincode=${CC_NAME}${channel_name}"
   successln "Done"
 }
 
 queryCommittedChaincode() {
   infoln "Querying committed chaincode definition on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
-  peer_id=$(getPeerId $1)
   if [ -n "$CC_CHANNEL" ]; then
     channel_name="&channel=$CC_CHANNEL"
   else
     channel_name=""
   fi
-  get "/peers/${peer_id}/chaincodes/committed?chaincode=${CC_NAME}${channel_name}"
+  getChaincodeData "/committed/peers/$1?chaincode=${CC_NAME}${channel_name}"
   successln "Done"
 }
 
 checkCommitReadiness() {
   infoln "Checking commit readiness on ${1-"default peer"} for channel ${CC_CHANNEL-"default channel"}..."
-  peer_id=$(getPeerId $1)
-
   if [ -n "$CC_INIT_FCN" ]; then
     init_required="true"
   else
@@ -185,10 +184,9 @@ checkCommitReadiness() {
     fi
 
     if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
-      # if i don't do it this way collection config might get evaluated too early and we don't sent valid json
-      post /peers/${peer_id}/chaincodes/commit-readiness "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH} | tr -d '\n')${channel_name}${signature_policy}}"
+      postChaincodeData "/commit-readiness/peers/$1" "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH} | tr -d '\n')${channel_name}${signature_policy}}"
     else
-      post /peers/${peer_id}/chaincodes/commit-readiness "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${channel_name}${signature_policy}}"
+      postChaincodeData "/commit-readiness/peers/$1" "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${channel_name}${signature_policy}}"
     fi
   else
     if [ -n "$CC_CHANNEL" ]; then
@@ -196,7 +194,7 @@ checkCommitReadiness() {
     else
       channel_name=""
     fi
-    get "/peers/${peer_id}/chaincodes/commit-readiness?chaincode=${CC_NAME}&version=${CC_VERSION}&sequence=${CC_SEQUENCE}&init_required=${init_required}${channel_name}"
+    getChaincodeData "/commit-readiness/peers/$1?chaincode=${CC_NAME}&version=${CC_VERSION}&sequence=${CC_SEQUENCE}&init_required=${init_required}${channel_name}"
   fi
 
   successln "Done"
@@ -242,7 +240,7 @@ compileAndPackageChaincode() {
 }
 
 isChaincodeInstalled() {
-  result=$(get /peers/$1/chaincodes/installed | jq -r ".[] | select(.package_id | contains(\"$2\"))")
+  result=$(getChaincodeData "/installed/peers/$1" | jq -r ".[] | select(.package_id | contains(\"$2\"))")
 
   # Check if result is empty
   if [ -z "$result" ]; then
@@ -253,15 +251,17 @@ isChaincodeInstalled() {
 }
 
 installChaincode() {
-  infoln "Installing chaincode on ${1-"default peer"}..."
-  peer_id=$(getPeerId $1)
+  infoln "Installing chaincode on ${1}..."
 
-  if isChaincodeInstalled $peer_id "${CC_NAME}_${CC_VERSION}"; then
+  if isChaincodeInstalled $1 "${CC_NAME}_${CC_VERSION}"; then
     successln "Chaincode already installed"
     exit 0
   fi
 
-  result=$(curl -A "Chaincode lifecycle" -F "file=@./${CC_NAME}.tar.gz" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -w "%{http_code}" -o /dev/null ${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}/peers/${peer_id}/chaincodes/install)
+  result=$(curl -A "Chaincode lifecycle" -F "file=@./${CC_NAME}.tar.gz" \
+    -H "x-auth-token: ${BTP_SERVICE_TOKEN}" \
+    -s -w "%{http_code}" -o /dev/null \
+    "${BTP_CLUSTER_MANAGER_URL}/chaincodes/install/peers/$1")
 
   # 408 and 504 are timeout errors, so we should start polling
   if [ "$result" -ge 400 ] && [ "$result" -ne 408 ] && [ "$result" -ne 504 ]; then
@@ -287,7 +287,7 @@ installChaincode() {
     fi
 
     # Call function to check packageId
-    if isChaincodeInstalled $peer_id "${CC_NAME}_${CC_VERSION}"; then
+    if isChaincodeInstalled $1 "${CC_NAME}_${CC_VERSION}"; then
       successln "Chaincode installed successfully"
       exit 0
     else
@@ -301,8 +301,8 @@ installChaincode() {
 
 approveChaincode() {
   infoln "Approving chaincode on peer ${1} to be committed on orderer ${2} for channel ${CC_CHANNEL-"default channel"}..."
-  peer_id=$(getPeerId $1)
-  orderer_id=$(getOrdererId $2)
+  peer_unique_name=$1
+  orderer_unique_name=$2
 
   if [ -n "$CC_INIT_FCN" ]; then
     init_required="true"
@@ -328,7 +328,7 @@ approveChaincode() {
     channel_name=""
   fi
 
-  post /peers/${peer_id}/orderers/${orderer_id}/chaincodes/approve "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
+  postChaincodeData "/approve" "{\"ordererUniqueName\": \"$orderer_unique_name\", \"peerUniqueName\": \"$peer_unique_name\", \"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
   successln "Done"
 }
 
@@ -352,10 +352,10 @@ isChaincodeCommitted() {
 
 commitChaincode() {
   infoln "Committing chaincode on peer ${1} to orderer ${2} for channel ${CC_CHANNEL-"default channel"}..."
-  peer_id=$(getPeerId $1)
-  orderer_id=$(getOrdererId $2)
+  peer_unique_name=$1
+  orderer_unique_name=$2
 
-  if isChaincodeCommitted $peer_id; then
+  if isChaincodeCommitted $peer_unique_name; then
     successln "Chaincode already committed"
     exit 0
   fi
@@ -384,7 +384,7 @@ commitChaincode() {
     channel_name=""
   fi
 
-  postWithFailOnError /peers/${peer_id}/orderers/${orderer_id}/chaincodes/commit "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
+  postChaincodeData "/commit" "{\"ordererUniqueName\": \"$orderer_unique_name\", \"peerUniqueName\": \"$peer_unique_name\", \"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${collections_config}${signature_policy}${channel_name}}"
 
   infoln "Request to commit chaincode sent, will start polling to check if chaincode is committed..."
 
@@ -405,7 +405,7 @@ commitChaincode() {
     fi
 
     # Call function to check packageId
-    if isChaincodeCommitted $peer_id; then
+    if isChaincodeCommitted $peer_unique_name; then
       successln "Chaincode committed successfully"
       exit 0
     else
@@ -425,13 +425,13 @@ initChaincode() {
     exit 0
   fi
 
-  peer_id=$(getPeerId $1)
-  orderer_id=$(getOrdererId $2)
+  peer_unique_name=$1
+  orderer_unique_name=$2
 
   if [ -n "$CC_CHANNEL" ]; then
-    post /peers/${peer_id}/orderers/${orderer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"channelName\": \"$CC_CHANNEL\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
+    postChaincodeData "/init" "{\"ordererUniqueName\": \"$orderer_unique_name\", \"peerUniqueName\": \"$peer_unique_name\", \"chaincodeName\": \"$CC_NAME\", \"channelName\": \"$CC_CHANNEL\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
   else
-    post /peers/${peer_id}/orderers/${orderer_id}/chaincodes/init "{\"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}${channel_name}}"
+    postChaincodeData "/init" "{\"ordererUniqueName\": \"$orderer_unique_name\", \"peerUniqueName\": \"$peer_unique_name\", \"chaincodeName\": \"$CC_NAME\", \"functionName\": \"$CC_INIT_FCN\", \"functionArgs\": ${CC_INIT_ARGS:-[]}}"
   fi
 
   successln "done"
@@ -440,8 +440,8 @@ initChaincode() {
 invokeChaincode() {
   channel=$CC_CHANNEL
 
-  peer=$1
-  orderer=$2
+  peer_unique_name=$1
+  orderer_unique_name=$2
   function_name=$3
   shift 3
 
@@ -465,10 +465,10 @@ invokeChaincode() {
     esac
   done
 
-  infoln "Invoking chaincode on peer $peer to orderer $orderer for $function_name with ${arguments-"NO ARGUMENTS"} and transient data ${transient-"NONE"} on channel ${channel-"default channel"}..."
+  infoln "Invoking chaincode on peer $peer_unique_name to orderer $orderer_unique_name for $function_name with ${arguments-"NO ARGUMENTS"} and transient data ${transient-"NONE"} on channel ${channel-"default channel"}..."
 
   # Construct the JSON payload
-  json_payload='{"chaincodeName": "'$CC_NAME'", "functionName": "'$function_name'", "functionArgs": '${arguments:-[]}
+  json_payload='{"ordererUniqueName": "'$orderer_unique_name'", "peerUniqueName": "'$peer_unique_name'", "chaincodeName": "'$CC_NAME'", "functionName": "'$function_name'", "functionArgs": '${arguments:-[]}
 
   # Add channel if it exists
   if [ -n "$channel" ]; then
@@ -484,11 +484,8 @@ invokeChaincode() {
 
   echo $json_payload
 
-  peer_id=$(getPeerId $peer)
-  orderer_id=$(getOrdererId $orderer)
-
   # Execute request
-  post /peers/${peer_id}/orderers/${orderer_id}/chaincodes/invoke "$json_payload"
+  postChaincodeData "/invoke" "$json_payload"
 
   successln "done"
 }
@@ -496,7 +493,7 @@ invokeChaincode() {
 queryChaincode() {
   channel=$CC_CHANNEL
 
-  node=$1
+  peer_unique_name=$1
   function_name=$2
   shift 2
 
@@ -516,7 +513,7 @@ queryChaincode() {
     esac
   done
 
-  infoln "Querying chaincode on $node for $function_name with ${arguments-"NO ARGUMENTS"} on channel ${channel-"default channel"}..."
+  infoln "Querying chaincode on $peer_unique_name for $function_name with ${arguments-"NO ARGUMENTS"} on channel ${channel-"default channel"}..."
 
   # Parse and format the arguments to query string
   if [[ -n $arguments && $arguments != \[* && $arguments != *\] ]]; then
@@ -545,8 +542,6 @@ queryChaincode() {
     query_arguments=""
   fi
 
-  peer_id=$(getPeerId $1)
-
   if [ -n "$channel" ]; then
     query_channel="&channel=$channel"
   else
@@ -554,7 +549,7 @@ queryChaincode() {
   fi
 
   # Execute request
-  get "/peers/${peer_id}/chaincodes/query?chaincode=$CC_NAME&function_name=${function_name}${query_arguments}${query_channel}"
+  getChaincodeData "/query/peers/${peer_unique_name}?chaincode=$CC_NAME&function_name=${function_name}${query_arguments}${query_channel}" 
 
   successln "done"
 }

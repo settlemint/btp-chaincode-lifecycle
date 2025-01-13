@@ -89,7 +89,6 @@ postWithFailOnError() {
   fi
 }
 
-
 jqFormatOrError() {
   response=$1
   jq_format=$2
