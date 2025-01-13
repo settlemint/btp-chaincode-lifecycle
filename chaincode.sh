@@ -184,6 +184,7 @@ checkCommitReadiness() {
     fi
 
     if [ -n "$CC_COLLECTIONS_CONFIG_PATH" ]; then
+      # if i don't do it this way collection config might get evaluated too early and we don't sent valid json
       postChaincodeData "/commit-readiness/peers/$1" "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": $init_required, \"collectionsConfig\": $(cat ${CC_COLLECTIONS_CONFIG_PATH} | tr -d '\n')${channel_name}${signature_policy}}"
     else
       postChaincodeData "/commit-readiness/peers/$1" "{\"chaincodeName\": \"$CC_NAME\", \"chaincodeVersion\": \"$CC_VERSION\", \"chaincodeSequence\": $CC_SEQUENCE, \"initRequired\": ${init_required}${channel_name}${signature_policy}}"
