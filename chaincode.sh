@@ -11,9 +11,9 @@ findAndSourceEnv $DIR
 usage() {
   echo "Usage: $0 <command> [options]"
   echo "Commands:"
-  echo "  peers <application_name>           : Query the peers (defaults to SETTLEMINT_APPLICATION)"
-  echo "  orderers <application_name>        : Query the orderers (defaults to SETTLEMINT_APPLICATION)"
-  echo "  nodes <application_name>           : Query all the nodes (defaults to SETTLEMINT_APPLICATION)"
+  echo "  peers <application_name>           : Query the peers (defaults to the application of this smart contract set)"
+  echo "  orderers <application_name>        : Query the orderers (defaults to the application of this smart contract set)"
+  echo "  nodes <application_name>           : Query all the nodes (defaults to the application of this smart contract set)"
   echo "  orderer-channels <orderer>         : Query the channels of the orderer"
   echo "  peer-channels <peer>               : Query the channels of the peer"
   echo "  installed <peer>                   : Query installed chaincodes"
