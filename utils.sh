@@ -49,35 +49,16 @@ validateEnvVariables() {
   fi
 }
 
-# Chaincode related API calls
-getChaincodeData() {
-  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s "${BTP_CLUSTER_MANAGER_URL}/chaincodes$1"
+get() {
+  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s "${BTP_CLUSTER_MANAGER_URL}$1"
 }
 
-deleteChaincodeData() {
-  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -X DELETE "${BTP_CLUSTER_MANAGER_URL}/chaincodes$1"
+post() {
+  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X POST -d "$2" "${BTP_CLUSTER_MANAGER_URL}$1"
 }
 
-postChaincodeData() {
-  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X POST -d "$2" "${BTP_CLUSTER_MANAGER_URL}/chaincodes$1"
-}
-
-# Channel related API calls
-getChannelData() {
-  curl -A "Channel operations" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s "${BTP_CLUSTER_MANAGER_URL}/channels$1"
-}
-
-postChannelData() {
-  curl -A "Channel operations" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X POST -d "$2" "${BTP_CLUSTER_MANAGER_URL}/channels$1"
-}
-
-deleteChannelData() {
-  curl -A "Channel operations" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X DELETE "${BTP_CLUSTER_MANAGER_URL}/channels$1"
-}
-
-# Application related API calls
-getApplicationData() {
-  curl -A "Application operations" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s "${BTP_CLUSTER_MANAGER_URL}/applications$1"
+delete() {
+  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -X DELETE "${BTP_CLUSTER_MANAGER_URL}$1"
 }
 
 jqFormatOrError() {
