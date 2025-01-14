@@ -9,7 +9,7 @@ C_YELLOW='\033[1;33m'
 validateEnvVariables() {
   println "executing from ${DIR} with the following"
   println "- BTP_CLUSTER_MANAGER_URL: ${C_GREEN}${BTP_CLUSTER_MANAGER_URL}${C_RESET}"
-  println "- BTP_SERVICE_TOKEN: ${C_GREEN}${BTP_SERVICE_TOKEN}${C_RESET}"
+  println "- BTP_SERVICE_TOKEN: ${C_GREEN}${BTP_SERVICE_TOKEN:0:8}...${C_RESET}"
   println "- BTP_SCS_ID: ${C_GREEN}${BTP_SCS_ID}${C_RESET}"
   println "- CC_RUNTIME_LANGUAGE: ${C_GREEN}${CC_RUNTIME_LANGUAGE}${C_RESET}"
   println "- CC_SRC_PATH: ${C_GREEN}${CC_SRC_PATH}${C_RESET}"
