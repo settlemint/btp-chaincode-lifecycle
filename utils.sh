@@ -9,7 +9,7 @@ C_YELLOW='\033[1;33m'
 validateEnvVariables() {
   println "executing from ${DIR} with the following"
   println "- BTP_CLUSTER_MANAGER_URL: ${C_GREEN}${BTP_CLUSTER_MANAGER_URL}${C_RESET}"
-  println "- BTP_SERVICE_TOKEN: ${C_GREEN}${BTP_SERVICE_TOKEN}${C_RESET}"
+  println "- BTP_SERVICE_TOKEN: ${C_GREEN}${BTP_SERVICE_TOKEN:0:8}...${C_RESET}"
   println "- BTP_SCS_ID: ${C_GREEN}${BTP_SCS_ID}${C_RESET}"
   println "- CC_RUNTIME_LANGUAGE: ${C_GREEN}${CC_RUNTIME_LANGUAGE}${C_RESET}"
   println "- CC_SRC_PATH: ${C_GREEN}${CC_SRC_PATH}${C_RESET}"
@@ -50,24 +50,32 @@ validateEnvVariables() {
 }
 
 get() {
-  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s "${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1"
-}
-
-delete() {
-  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -X DELETE "${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1"
+  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s "${BTP_CLUSTER_MANAGER_URL}$1"
 }
 
 post() {
-  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X POST -d "$2" "${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1"
+  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -X POST -d "$2" "${BTP_CLUSTER_MANAGER_URL}$1"
 }
 
-postWithFailOnError() {
-  result=$(curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -H "Content-Type: application/json" -s -w "%{http_code}" -o /dev/null -X POST -d "$2" "${BTP_CLUSTER_MANAGER_URL}/ide/chaincode/${BTP_SCS_ID}$1")
+delete() {
+  curl -A "Chaincode lifecycle" -H "x-auth-token: ${BTP_SERVICE_TOKEN}" -s -X DELETE "${BTP_CLUSTER_MANAGER_URL}$1"
+}
 
-  # 408 and 504 are timeout errors, so we should start polling
-  if [ "$result" -ge 400 ] && [ "$result" -ne 408 ] && [ "$result" -ne 504 ]; then
-    fatalln "Request failed with HTTP status code $result"
+jqFormatOrError() {
+  response=$1
+  jq_format=$2
+  
+  # First check if response is an object (not an array)
+  if echo "$response" | jq -e 'type=="object"' > /dev/null; then
+    # Then check if it's an error object
+    if echo "$response" | jq -e 'has("error")' > /dev/null; then
+      error_msg=$(echo "$response" | jq -r '.message')
+      fatalln "Error: $error_msg"
+    fi
   fi
+  
+  # If we reach here, either it's an array or a success object
+  echo "$response" | jq -r "$jq_format"
 }
 
 findAndSourceEnv() {
